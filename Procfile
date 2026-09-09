@@ -1,1 +1,1 @@
-web: python manage.py migrate && gunicorn Kherwar_Calendar.wsgi --log-file -
+web: python manage.py migrate && gunicorn backend.wsgi --bind 0.0.0.0:$PORT --log-file -
