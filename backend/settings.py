@@ -69,7 +69,7 @@ USE_I18N = True
 USE_TZ = True
 
 # ✅ স্ট্যাটিক ফাইল কনফিগারেশন
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'   # Railway/সার্ভারে static ফাইল এখানে জমা হবে
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
