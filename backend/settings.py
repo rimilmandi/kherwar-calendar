@@ -11,7 +11,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'change-this-in-production')
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # Railway-এর অটো ডোমেইন, আপনার কাস্টম ডোমেইন এবং লোকালহোস্ট
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '.railway.app', 'kherwarcalendar.co.in'] 
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '.railway.app', 'kherwarcalendar.co.in', 'www.kherwarcalendar.co.in'] 
 # 👆 'your-domain.com' এর জায়গায় আপনার আসল ডোমেইন বসান। Railway অটোমেটিক .railway.app ডোমেইন পেয়ে যাবে।
 
 INSTALLED_APPS = [
