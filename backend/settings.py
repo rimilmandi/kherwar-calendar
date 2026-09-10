@@ -86,5 +86,9 @@ CSRF_TRUSTED_ORIGINS = [
     'https://www.kherwarcalendar.co.in',
 ]
 
+# লগইন এবং লগআউট সেটিংস
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/admin-panel/'   # লগইন সফল হলে অ্যাডমিন প্যানেলে যাবে
+LOGOUT_REDIRECT_URL = '/'
 
 
