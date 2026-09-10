@@ -4822,9 +4822,18 @@ document.addEventListener("DOMContentLoaded",function(){
 (function(){
 "use strict";
 
+// ============================================================
+// KHERWAR DB SYNC — অটো-আপডেট সিস্টেম
+// ============================================================
 window.KHERWAR_DB = {months:[], newMoons:[], history:[], events:[], solarEvents:[], ads:[], settings:{}};
 
-// ===== ADVERTISEMENT RENDERER =====
+// শেষ আপডেটের সময় ট্র্যাক করার জন্য
+let lastUpdateTime = null;
+let syncIntervalId = null;
+
+// ============================================================
+// ১. বিজ্ঞাপন রেন্ডার করার ফাংশন (আগের মতোই, তবে উন্নত)
+// ============================================================
 function renderAds() {
     console.log('Rendering ads...', window.KHERWAR_DB.ads);
     
@@ -4834,98 +4843,181 @@ function renderAds() {
     }
     
     window.KHERWAR_DB.ads.forEach(function(a) {
-        // ✅ প্রথমে সব ভেরিয়েবল ডিক্লেয়ার করুন
         const slot = String(a.slot || "").trim();
         const business = a.business_name || "Advertisement";
         const image = a.image || "";
         const target = a.target_url || "";
 
-        console.log('Processing ad:', {slot, business, image, target});
-
         // ===== FEATURED SLOT =====
         if (slot === 'featured') {
             const featuredEl = document.getElementById('featuredBusiness');
             if (featuredEl) {
-                console.log('Rendering featured ad:', business);
-                let content = '';
-                content += `<h3>🌿 ${business}</h3>`;
+                let content = '<h3>🌿 ' + business + '</h3>';
                 if (image) {
-                    content += `<img src="${image}" alt="${business}" style="width:100%;max-height:180px;object-fit:cover;border-radius:10px;margin:10px 0;">`;
+                    content += '<img src="' + image + '" alt="' + business + '" style="width:100%;max-height:180px;object-fit:cover;border-radius:10px;margin:10px 0;">';
                 } else {
-                    content += `<p style="color:#666;font-size:14px;">সাঁওতালি সংস্কৃতি, অনুষ্ঠান ও স্থানীয় ব্যবসার তথ্য এখানে প্রদর্শিত হবে।</p>`;
+                    content += '<p style="color:#666;font-size:14px;">সাঁওতালি সংস্কৃতি, অনুষ্ঠান ও স্থানীয় ব্যবসার তথ্য এখানে প্রদর্শিত হবে।</p>';
                 }
                 if (target) {
-                    content += `<p><a href="${target}" target="_blank" rel="noopener noreferrer" style="color:#087f5b;font-weight:bold;text-decoration:none;background:#e8f5e9;padding:8px 16px;border-radius:8px;display:inline-block;">🔗 বিস্তারিত দেখুন</a></p>`;
+                    content += '<p><a href="' + target + '" target="_blank" rel="noopener noreferrer" style="color:#087f5b;font-weight:bold;text-decoration:none;background:#e8f5e9;padding:8px 16px;border-radius:8px;display:inline-block;">🔗 বিস্তারিত দেখুন</a></p>';
                 }
                 featuredEl.innerHTML = content;
                 featuredEl.style.border = '2px solid #d7a52a';
                 featuredEl.style.background = 'linear-gradient(135deg, #fffdf0, #fff8dc)';
                 featuredEl.style.borderRadius = '16px';
                 featuredEl.style.padding = '15px';
-                console.log("FEATURED AD RENDERED:", business);
-            } else {
-                console.warn("Featured element not found!");
             }
-            return; // featured স্লটের জন্য বাকি কোড স্কিপ
-        }
-
-        // ===== OTHER SLOTS (left_top, right_top, right_bottom) =====
-        const el = document.querySelector('[data-ad-slot="' + slot + '"]');
-        console.log('Looking for slot:', slot, 'Found:', el);
-        
-        if (!el) {
-            console.warn("ADVERTISEMENT SLOT NOT FOUND:", slot);
             return;
         }
 
-        let content = "";
+        // ===== OTHER SLOTS =====
+        const el = document.querySelector('[data-ad-slot="' + slot + '"]');
+        if (!el) return;
 
+        let content = "";
         if (image) {
             content = '<img src="' + image + '" alt="' + business + '" style="width:100%;height:100%;min-height:150px;object-fit:cover;display:block;border-radius:12px;">';
         } else {
             content = '<div style="padding:25px;font-weight:700;text-align:center;color:#666;">' + business + '</div>';
         }
-
         if (target) {
             content = '<a href="' + target + '" target="_blank" rel="noopener noreferrer" style="display:block;width:100%;height:100%;">' + content + '</a>';
         }
-
         el.innerHTML = content;
         el.style.padding = "0";
         el.style.overflow = "hidden";
         el.style.borderRadius = "12px";
-        console.log("ADVERTISEMENT RENDERED:", business, slot);
     });
 }
 
-// ===== SYNC FUNCTION =====
+// ============================================================
+// ২. ক্যালেন্ডার ইভেন্ট আপডেট করার ফাংশন
+// ============================================================
+function renderCalendarEvents() {
+    if (!window.KHERWAR_DB.events || window.KHERWAR_DB.events.length === 0) return;
+    console.log('Calendar events loaded:', window.KHERWAR_DB.events.length);
+    
+    // আপনি এখানে কাস্টম ইভেন্ট রেন্ডার করার কোড যোগ করতে পারেন
+    // উদাহরণ: fixedEvents অবজেক্টে নতুন ইভেন্ট যোগ করা
+    window.KHERWAR_DB.events.forEach(function(ev) {
+        if (ev.date && ev.title) {
+            fixedEvents[ev.date] = {
+                title: ev.title,
+                description: ev.description || "",
+                santaliTitle: ev.santaliTitle || ev.title,
+                bengaliTitle: ev.bengaliTitle || ev.title,
+                image: ev.image || "",
+                eventLabel: ev.eventLabel || ""
+            };
+        }
+    });
+    
+    // ক্যালেন্ডার রিফ্রেশ করুন
+    if (typeof generateCalendar === 'function') {
+        generateCalendar();
+    }
+}
+
+// ============================================================
+// ৩. সোলার ইভেন্ট আপডেট
+// ============================================================
+function renderSolarEvents() {
+    if (!window.KHERWAR_DB.solarEvents || window.KHERWAR_DB.solarEvents.length === 0) return;
+    console.log('Solar events loaded:', window.KHERWAR_DB.solarEvents.length);
+    
+    // সোলার কার্ডে আপডেট
+    const solarList = document.getElementById('solarList');
+    if (solarList) {
+        let content = '';
+        window.KHERWAR_DB.solarEvents.forEach(function(ev) {
+            content += '<div class="solar-item"><b>' + (ev.date || '') + '</b><span>' + (ev.title || '') + '</span></div>';
+        });
+        solarList.innerHTML = content;
+    }
+}
+
+// ============================================================
+// ৪. SYNC FUNCTION — সার্ভার থেকে ডেটা আনা
+// ============================================================
 window.sync = async function() {
     try {
-        const r = await fetch('/api/calendar/bootstrap/', {credentials:'same-origin'});
+        const r = await fetch('/api/calendar/bootstrap/', {
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        
         if (!r.ok) throw Error('Database read failed');
-        window.KHERWAR_DB = await r.json();
-        console.log('DB loaded:', window.KHERWAR_DB);
-        renderAds();
+        
+        const data = await r.json();
+        
+        // ডেটা পরিবর্তন হয়েছে কিনা চেক করুন
+        const newHash = JSON.stringify(data.ads || []) + JSON.stringify(data.events || []);
+        const oldHash = JSON.stringify(window.KHERWAR_DB.ads || []) + JSON.stringify(window.KHERWAR_DB.events || []);
+        
+        window.KHERWAR_DB = data;
+        lastUpdateTime = new Date();
+        
+        // শুধুমাত্র পরিবর্তন হলে রেন্ডার করুন
+        if (newHash !== oldHash) {
+            console.log('🔄 Data changed! Updating...');
+            renderAds();
+            renderCalendarEvents();
+            renderSolarEvents();
+        }
+        
     } catch(e) {
         console.warn('Kherwar DB sync failed:', e);
     }
 };
 
-// ===== RUN ON LOAD =====
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(window.sync, 100);
-    });
-} else {
-    setTimeout(window.sync, 100);
+// ============================================================
+// ৫. AUTO-SYNC TIMER — প্রতি ৩০ সেকেন্ডে ডেটা চেক
+// ============================================================
+function startAutoSync() {
+    // প্রথমবার লোড
+    window.sync();
+    
+    // প্রতি ৩০ সেকেন্ডে অটো-সিঙ্ক
+    syncIntervalId = setInterval(function() {
+        // পেজটি দৃশ্যমান থাকলে তবেই সিঙ্ক করুন (ব্যাটারি সাশ্রয়ের জন্য)
+        if (!document.hidden) {
+            window.sync();
+        }
+    }, 30000); // 30 seconds
 }
 
-// ===== FALLBACK =====
-setTimeout(function() {
-    if (window.KHERWAR_DB && window.KHERWAR_DB.ads && window.KHERWAR_DB.ads.length > 0) {
-        renderAds();
+// ============================================================
+// ৬. RUN ON LOAD
+// ============================================================
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(startAutoSync, 500);
+    });
+} else {
+    setTimeout(startAutoSync, 500);
+}
+
+// ============================================================
+// ৭. পেজ আবার দৃশ্যমান হলে সাথে সাথে সিঙ্ক করুন
+// ============================================================
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+        window.sync();
     }
-}, 2000);
+});
+
+// ============================================================
+// ৮. অ্যাডমিন প্যানেলে সেভ করলে ব্রডকাস্ট চ্যানেল
+// ============================================================
+if ('BroadcastChannel' in window) {
+    const channel = new BroadcastChannel('kherwar-calendar-updates');
+    channel.onmessage = function(event) {
+        if (event.data === 'data-updated') {
+            console.log('📢 Admin update received! Syncing...');
+            window.sync();
+        }
+    };
+}
 
 })();
 </script>
