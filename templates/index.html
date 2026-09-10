@@ -2117,8 +2117,8 @@ body{background:#eef3ef!important;padding:0!important}
 <body>
     <div class="container">
         <header>
-            <h1>KHERWAR LUNAR CALENDAR 5026</h1>
-            <div class="santali-title">ᱠᱷᱮᱨᱣᱟᱲ ᱪᱟᱸᱫᱳ ᱞᱮᱠᱷᱟ ᱕᱐᱒᱖</div>
+            <h1>KHERWAR LUNI-SOLAR CALENDAR 5026</h1>
+            <div class="santali-title">ᱠᱷᱮᱨᱣᱟᱲ ᱥᱮᱨᱢᱟᱼᱪᱟᱸᱫᱳ ᱞᱮᱠᱷᱟ ᱕᱐᱒᱖</div>
         </header>
         
         <div class="control-panel">
@@ -4383,21 +4383,61 @@ function setupMultipleImages(dateElement, imageCount) {
         carouselSwipeBound = true;
     };
 
-    // Fix touch navigation so it doesn't accumulate listeners after redraw.
-    window.setupTouchEvents = function(){
-        if (calendarSwipeBound) return;
-        const calendarContainer = document.getElementById('calendar-container');
-        if (!calendarContainer) return;
-        let startX = 0;
-        calendarContainer.addEventListener('touchstart',e=>{
-            startX = e.touches[0].clientX;
-        },{passive:true});
-        calendarContainer.addEventListener('touchend',e=>{
-            const diff = e.changedTouches[0].clientX - startX;
-            if (Math.abs(diff)>70) changeMonth(diff>0 ? -1 : 1);
-        },{passive:true});
-        calendarSwipeBound = true;
-    };
+    // ============================================================
+// ফিক্সড টাচ ইভেন্ট — স্ক্রলিং ও সোয়াইপের মধ্যে পার্থক্য
+// ============================================================
+window.setupTouchEvents = function(){
+    if (calendarSwipeBound) return;
+    const calendarContainer = document.getElementById('calendar-container');
+    if (!calendarContainer) return;
+
+    let startX = 0;
+    let startY = 0;
+    let startTime = 0;
+    let isHorizontalSwipe = false;
+
+    calendarContainer.addEventListener('touchstart', function(e){
+        if (e.touches.length !== 1) return; // একাধিক আঙুল হলে সোয়াইপ বন্ধ
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        startTime = Date.now();
+        isHorizontalSwipe = false;
+    }, { passive: true });
+
+    calendarContainer.addEventListener('touchmove', function(e){
+        if (e.touches.length !== 1) return;
+        const deltaX = Math.abs(e.touches[0].clientX - startX);
+        const deltaY = Math.abs(e.touches[0].clientY - startY);
+
+        // যদি উল্লম্ব মুভমেন্ট অনুভূমিকের চেয়ে বেশি হয় → এটি স্ক্রল, সোয়াইপ নয়
+        if (deltaY > deltaX && deltaY > 10) {
+            isHorizontalSwipe = false;
+            return;
+        }
+
+        // যদি অনুভূমিক মুভমেন্ট অনেক বেশি হয় → এটি সোয়াইপ
+        if (deltaX > deltaY * 1.5 && deltaX > 15) {
+            isHorizontalSwipe = true;
+        }
+    }, { passive: true });
+
+    calendarContainer.addEventListener('touchend', function(e){
+        if (!isHorizontalSwipe) return;
+
+        const deltaX = e.changedTouches[0].clientX - startX;
+        const deltaY = Math.abs(e.changedTouches[0].clientY - startY);
+        const elapsed = Date.now() - startTime;
+
+        // শর্ত: দ্রুত সোয়াইপ (৭০০ms এর কম) + পর্যাপ্ত দূরত্ব (৬০px) + উল্লম্ব মুভমেন্ট কম
+        if (elapsed < 700 && Math.abs(deltaX) > 60 && deltaY < 50) {
+            changeMonth(deltaX > 0 ? -1 : 1);
+        }
+
+        isHorizontalSwipe = false;
+    }, { passive: true });
+
+    calendarSwipeBound = true;
+};
 
     // Make the reset button clearer.
     document.addEventListener('DOMContentLoaded',()=>{
