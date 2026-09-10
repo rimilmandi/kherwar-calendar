@@ -1481,6 +1481,282 @@
         }
 
         /* ============================================================
+   SMALL MOBILE (max-width: 380px) — ছোট মোবাইলের জন্য বিশেষ স্টাইল
+   ============================================================ */
+@media (max-width: 380px) {
+    
+    /* কন্ট্রোল প্যানেল */
+    .control-panel {
+        padding: 8px 6px;
+        gap: 6px;
+    }
+    
+    .nav-btn, .reload-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+    }
+    
+    .date-display select {
+        height: 32px;
+        font-size: 0.68rem;
+        padding: 6px 5px;
+        border-radius: 14px;
+    }
+    
+    .time-display {
+        min-width: 82px;
+        height: 32px;
+        font-size: 0.62rem;
+        padding: 6px 6px;
+        border-radius: 14px;
+    }
+    
+    /* ক্যালেন্ডার হেডার */
+    .calendar-header {
+        margin: 6px 5px 0;
+        padding: 7px 5px;
+        font-size: 0.7rem;
+        min-height: 34px;
+        border-radius: 9px;
+    }
+    
+    .english-header { font-size: 0.75rem; }
+    .santali-header { font-size: 0.68rem; }
+    
+    /* ক্যালেন্ডার গ্রিড */
+    .calendar-container {
+        padding: 7px 4px 70px;
+    }
+    
+    .calendar {
+        gap: 2px;
+    }
+    
+    /* দিনের হেডার */
+    .day-header {
+        min-height: 38px;
+        padding: 3px 1px;
+        border-radius: 6px;
+        font-size: 0.55rem;
+    }
+    
+    .santali-day {
+        font-size: 0.48rem;
+        margin-top: 1px;
+    }
+    
+    /* ============================================================
+       ডেট সেল (সবচেয়ে গুরুত্বপূর্ণ অংশ)
+       ============================================================ */
+    .date {
+        min-height: 62px;
+        padding: 2px 1px;
+        border-radius: 6px;
+    }
+    
+    /* তারিখের কনটেন্ট */
+    .date-content {
+        gap: 0;
+        text-shadow: 0 0 2px white, 0 0 2px white;
+    }
+    
+    /* ইংরেজি তারিখ */
+    .english-date {
+        font-size: 0.7rem;
+        line-height: 1.1;
+    }
+    
+    /* সাঁওতালি তারিখ */
+    .santali-date {
+        font-size: 0.82rem;
+        line-height: 1.1;
+    }
+    
+    /* বাংলা তারিখ */
+    .bengali-date {
+        font-size: 0.55rem;
+        line-height: 1.1;
+    }
+    
+    /* মাসের নাম (১ তারিখে) */
+    .santali-month-name,
+    .bengali-month-name {
+        font-size: 0.42rem;
+        padding: 1px 2px;
+        border-radius: 3px;
+    }
+    
+    /* ইভেন্টের ইমেজ (অতিরিক্ত বড় হলে হাইড) */
+    .moon-image {
+        width: 16px;
+        height: 16px;
+        margin-top: 1px;
+    }
+    
+    .event-image {
+        width: 16px;
+        height: 16px;
+    }
+    
+    /* ইভেন্ট লেবেল */
+    .event-label {
+        font-size: 0.5rem;
+        padding: 1px 0;
+    }
+    
+    /* সোয়াইপ ইন্ডিকেটর */
+    .swipe-indicator {
+        font-size: 0.6rem;
+        margin-top: 7px;
+    }
+    
+    /* ইভেন্ট কন্টেইনার */
+    .events-container {
+        margin-top: 10px;
+        padding: 9px;
+        border-radius: 10px;
+    }
+    
+    .events-title {
+        font-size: 0.72rem;
+    }
+    
+    .event-item {
+        padding: 7px;
+        gap: 7px;
+        min-height: 78px;
+        border-radius: 10px;
+    }
+    
+    .event-image-large {
+        width: 46px;
+        height: 58px;
+        border-radius: 6px;
+    }
+    
+    .event-details h3 {
+        font-size: 0.72rem;
+    }
+    
+    .event-details p {
+        font-size: 0.6rem;
+    }
+    
+    .event-date {
+        font-size: 0.58rem !important;
+    }
+    
+    /* ============================================================
+       সৌর ও চন্দ্র বক্স (মোবাইলে পাশাপাশি)
+       ============================================================ */
+    .special-days-row {
+        gap: 6px !important;
+        margin-top: 10px !important;
+        padding: 0 3px !important;
+    }
+    
+    .side-card {
+        padding: 8px !important;
+    }
+    
+    .solar-card h3,
+    .lunar-card h3 {
+        font-size: 0.62rem !important;
+        margin-bottom: 6px !important;
+    }
+    
+    .solar-item, .lunar-item {
+        padding: 4px 5px !important;
+        margin-bottom: 3px !important;
+        border-radius: 6px !important;
+    }
+    
+    .solar-item b, .lunar-item b {
+        font-size: 0.55rem !important;
+    }
+    
+    .solar-item span, .lunar-item span {
+        font-size: 0.5rem !important;
+    }
+    
+    /* ফুটার */
+    footer {
+        padding: 10px 8px 80px;
+        font-size: 0.58rem;
+    }
+    
+    /* মোবাইল অ্যাপ টুলস */
+    .mobile-app-tools button {
+        font-size: 0.62rem;
+        padding: 6px 4px;
+        border-radius: 9px;
+    }
+    
+    /* ক্যালেন্ডার টাইপ বাটন */
+    .calendar-type-btn {
+        padding: 6px 3px;
+        font-size: 0.62rem;
+        border-radius: 9px;
+    }
+    
+    /* FAB বাটন */
+    .app-fab {
+        width: 46px;
+        height: 46px;
+        font-size: 1rem;
+        bottom: 78px;
+        right: 12px;
+    }
+    
+    /* বটম নেভিগেশন */
+    .app-bottom-nav {
+        height: 60px;
+        padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
+    }
+    
+    .app-bottom-nav button {
+        font-size: 0.55rem;
+        gap: 2px;
+    }
+    
+    .app-bottom-nav button i {
+        font-size: 0.95rem;
+    }
+}
+
+/* ============================================================
+   EXTRA SMALL (max-width: 320px) — অত্যন্ত ছোট মোবাইলের জন্য
+   ============================================================ */
+@media (max-width: 320px) {
+    .date {
+        min-height: 54px;
+        padding: 2px 0;
+    }
+    
+    .english-date { font-size: 0.62rem; }
+    .santali-date { font-size: 0.72rem; }
+    .bengali-date { font-size: 0.48rem; }
+    
+    .day-header {
+        min-height: 34px;
+        font-size: 0.5rem;
+    }
+    
+    .santali-day { font-size: 0.42rem; }
+    
+    .santali-month-name,
+    .bengali-month-name {
+        font-size: 0.38rem;
+    }
+    
+    .calendar {
+        gap: 1px;
+    }
+}
+
+        /* ============================================================
            DESKTOP LAYOUT — সৌর বামে, চন্দ্র ডানে
            ============================================================ */
         .desktop-calendar-layout {
