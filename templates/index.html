@@ -5021,239 +5021,49 @@ if ('BroadcastChannel' in window) {
 
 })();
 </script>
-
-<!-- ============================================================
-     KHERWAR CALENDAR — ADS + LUNAR/SOLAR CONTROL UPGRADE
-     Uses the existing Advertisement/LunarEvent/SolarEvent fields.
-     No database migration is required.
-     ============================================================ -->
-<style id="kherwar-upgrade-style">
-.kc-ad-stack{display:flex;flex-direction:column;gap:10px;width:100%}
-.kc-ad-badge{display:inline-block;font-size:10px;font-weight:900;letter-spacing:.08em;padding:4px 7px;border-radius:999px;background:#fff3c4;color:#755600;margin-bottom:5px}
-.kc-ad-copy{padding:13px;text-align:center;font-weight:800}
-.kc-ad-copy small{display:block;font-weight:600;color:#667085;margin-top:4px}
-.kc-ad-image{width:100%;min-height:150px;max-height:240px;object-fit:cover;display:block;border-radius:12px}
-.kc-ad-link{display:block;text-decoration:none;color:inherit}
-.kc-featured-inner{display:grid;gap:8px}
-.kc-featured-inner h3{margin:0}
-.kc-featured-inner img{width:100%;max-height:220px;object-fit:cover;border-radius:12px}
-.kc-featured-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
-.kc-featured-actions a{display:inline-block;padding:8px 13px;border-radius:9px;background:#087f5b;color:#fff;text-decoration:none;font-weight:800;font-size:13px}
-.kc-lunar-event{border-left:4px solid #087f5b}
-.kc-lunar-moon{border-left:4px solid #5b6ee1}
-.kc-solar-empty,.kc-lunar-empty{padding:10px;color:#718096;font-size:12px;background:#f7faf9;border-radius:9px}
-@media(max-width:700px){
-  .kc-ad-image{min-height:120px;max-height:190px}
-}
-</style>
-
-<script id="kherwar-ads-lunar-solar-upgrade">
+<script>
+// FINAL KHERWAR CALENDAR EVENT/CARD FIX
 (function(){
-"use strict";
-
-function kcEsc(v){
-  return String(v ?? "").replace(/[&<>"']/g, function(c){
-    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
-  });
-}
-
-function kcTodayKey(){
-  const d=new Date();
-  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
-}
-
-function kcSelectedYM(){
-  const yEl=document.getElementById("year-selector");
-  const mEl=document.getElementById("month-selector");
-  return {
-    year: yEl ? Number(yEl.value) : new Date().getFullYear(),
-    month: mEl ? Number(mEl.value)+1 : new Date().getMonth()+1
+  function escK(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+  function db(){return window.KHERWAR_DB||{events:[],solarEvents:[],months:[],newMoons:[]}}
+  function selectedYM(){return {y:Number(document.getElementById('year-selector')?.value),m:Number(document.getElementById('month-selector')?.value)}}
+  function getLunarForDate(d){
+    try{
+      const map=typeof getSantaliMonthMap==='function'?getSantaliMonthMap(d.getFullYear()):null;
+      if(map && typeof getSantaliDate==='function') return getSantaliDate(d,map);
+    }catch(e){}
+    return null;
+  }
+  window.renderLunarSpecialDaysFixed=function(){
+    const el=document.getElementById('lunarList'); if(!el)return;
+    const {y,m}=selectedYM(); const events=db().events||[]; const out=[];
+    for(let day=1;day<=new Date(y,m+1,0).getDate();day++){
+      const d=new Date(y,m,day,12); const ld=getLunarForDate(d); if(!ld)continue;
+      events.filter(e=>Number(e.month)===Number((db().months||[]).find(mm=>mm.olchiki_name===ld.month)?.order) && Number(e.day)===Number(ld.day)).forEach(e=>out.push({e,d,ld}));
+    }
+    if(!out.length){el.innerHTML='<div class="lunar-item"><b>এই মাসে</b><span>কোনও চন্দ্রমাসের বিশেষ দিন নেই</span></div>';return}
+    el.innerHTML=out.map(o=>`<div class="lunar-item"><b>${escK(o.ld.month)} — ${o.ld.day}</b><span>${escK(o.e.title)}${o.e.label?' · '+escK(o.e.label):''}</span>${o.e.description?'<small>'+escK(o.e.description)+'</small>':''}${o.e.image?'<img src="'+escK(o.e.image)+'" style="width:100%;max-height:90px;object-fit:cover;border-radius:8px;margin-top:5px">':''}</div>`).join('');
   };
-}
-
-function kcInDateRange(ad){
-  const today=kcTodayKey();
-  if(ad.start_date && ad.start_date > today) return false;
-  if(ad.end_date && ad.end_date < today) return false;
-  return true;
-}
-
-function kcSlotEl(slot){
-  if(slot==="featured") return document.getElementById("featuredBusiness");
-  return document.querySelector('[data-ad-slot="'+slot+'"]') ||
-         document.querySelector('[data-ad-slot="'+slot.replace(/_/g,"-")+'"]');
-}
-
-function kcAdHTML(ad, compact){
-  const business=kcEsc(ad.business_name || "Advertisement");
-  const image=String(ad.image || "");
-  const target=String(ad.target_url || "");
-  const img=image ? '<img class="kc-ad-image" src="'+kcEsc(image)+'" alt="'+business+'">' : "";
-  const copy='<div class="kc-ad-copy">'+business+
-             (compact ? "" : '<small>Sponsored</small>')+'</div>';
-  let content=img || copy;
-  if(image && !compact) content += '<div class="kc-ad-copy">'+business+'</div>';
-  if(target){
-    return '<a class="kc-ad-link" href="'+kcEsc(target)+'" target="_blank" rel="noopener noreferrer">'+content+'</a>';
-  }
-  return content;
-}
-
-function kcRenderAdSlot(slot, ads){
-  const el=kcSlotEl(slot);
-  if(!el) return;
-  el.classList.add("kc-ad-stack");
-  el.style.overflow="hidden";
-  el.style.padding="0";
-  if(!ads.length){
-    if(slot==="featured"){
-      el.innerHTML='<div class="kc-featured-inner"><h3>🌿 Kherwar Featured</h3><p>সাঁওতালি পণ্য, প্রতিষ্ঠান বা অনুষ্ঠানের প্রচার এখানে প্রদর্শিত হবে।</p></div>';
-      el.style.padding="15px";
-    }else{
-      el.innerHTML='<div class="kc-ad-copy"><span class="kc-ad-badge">ADVERTISEMENT</span><br>আপনার বিজ্ঞাপন এখানে</div>';
-    }
-    return;
-  }
-
-  let index=0;
-  function paint(){
-    const ad=ads[index % ads.length];
-    if(slot==="featured"){
-      const business=kcEsc(ad.business_name || "Kherwar Featured");
-      const image=ad.image ? '<img src="'+kcEsc(ad.image)+'" alt="'+business+'">' : "";
-      const link=ad.target_url ? '<a href="'+kcEsc(ad.target_url)+'" target="_blank" rel="noopener noreferrer">🔗 বিস্তারিত দেখুন</a>' : "";
-      el.innerHTML='<div class="kc-featured-inner"><span class="kc-ad-badge">FEATURED</span><h3>🌿 '+business+'</h3>'+image+'<div class="kc-featured-actions">'+link+'</div></div>';
-      el.style.padding="15px";
-      el.style.border="2px solid #d7a52a";
-      el.style.background="linear-gradient(135deg,#fffdf0,#fff8dc)";
-      el.style.borderRadius="16px";
-    }else{
-      el.innerHTML=kcAdHTML(ad,false);
-      el.style.borderRadius="12px";
-    }
-    index++;
-  }
-  paint();
-  if(ads.length>1){
-    const old=el.__kcAdTimer;
-    if(old) clearInterval(old);
-    el.__kcAdTimer=setInterval(paint,8000);
-  }
-}
-
-function renderAdsUpgraded(){
-  const all=(window.KHERWAR_DB && Array.isArray(window.KHERWAR_DB.ads)) ? window.KHERWAR_DB.ads : [];
-  const active=all.filter(function(a){ return kcInDateRange(a); })
-    .sort(function(a,b){ return Number(b.priority||0)-Number(a.priority||0); });
-
-  ["left_top","right_top","right_bottom","featured"].forEach(function(slot){
-    kcRenderAdSlot(slot, active.filter(function(a){ return String(a.slot||"").trim()===slot; }));
-  });
-}
-
-function renderLunarSpecialDaysUpgraded(){
-  const list=document.getElementById("lunarList");
-  if(!list) return;
-  const db=window.KHERWAR_DB || {};
-  const ym=kcSelectedYM();
-  const months=Array.isArray(db.months)?db.months:[];
-  const events=Array.isArray(db.events)?db.events:[];
-  const moons=Array.isArray(db.newMoons)?db.newMoons:[];
-
-  const monthOrderByOl={};
-  months.forEach(function(m){monthOrderByOl[m.olchiki_name]=Number(m.order);});
-
-  const lunarEvents=events.filter(function(e){
-    return Number(e.month) > 0 && Number(e.month) === Number(monthOrderByOl[(window.getSantaliDate && window.getSantaliDate(new Date(ym.year,ym.month-1,15))||{}).month]);
-  });
-
-  const monthEvents=lunarEvents.slice().sort(function(a,b){return Number(a.day||0)-Number(b.day||0);});
-  const monthMoonDays=moons.filter(function(m){
-    if(!m.date) return false;
-    const d=new Date(m.date+"T12:00:00");
-    return d.getFullYear()===ym.year && d.getMonth()+1===ym.month;
-  }).sort(function(a,b){return a.date.localeCompare(b.date);});
-
-  let html="";
-  monthEvents.forEach(function(e){
-    html+='<div class="lunar-item kc-lunar-event"><b>ᱢᱟᱦᱟ '+kcEsc(e.day)+' — '+kcEsc(e.title)+'</b><span>'+kcEsc(e.description||e.label||"চন্দ্রমাসের বিশেষ অনুষ্ঠান")+'</span></div>';
-  });
-  monthMoonDays.forEach(function(m){
-    html+='<div class="lunar-item kc-lunar-moon"><b>🌑 নতুন চাঁদ — '+kcEsc(m.date)+'</b><span>'+kcEsc(m.note||"Admin Panel-এর New Moon database")+'</span></div>';
-  });
-
-  if(!html){
-    html='<div class="kc-lunar-empty">এই মাসের জন্য Admin Panel-এ কোনো Lunar Event বা New Moon entry নেই।</div>';
-  }
-  list.innerHTML=html;
-}
-
-function renderSolarSpecialDaysUpgraded(){
-  const list=document.getElementById("solarList");
-  if(!list) return;
-  const db=window.KHERWAR_DB || {};
-  const ym=kcSelectedYM();
-  const solar=(Array.isArray(db.solarEvents)?db.solarEvents:[]).filter(function(e){
-    if(!e.date) return false;
-    const d=new Date(e.date+"T12:00:00");
-    return d.getFullYear()===ym.year && d.getMonth()+1===ym.month;
-  }).sort(function(a,b){return String(a.date).localeCompare(String(b.date));});
-
-  if(!solar.length){
-    list.innerHTML='<div class="kc-solar-empty">এই মাসের জন্য কোনো Solar Event নেই। Admin Panel → Solar Events থেকে যোগ করুন।</div>';
-    return;
-  }
-  list.innerHTML=solar.map(function(e){
-    return '<div class="solar-item"><b>'+kcEsc(e.date)+'</b><span>'+kcEsc(e.title||"Solar Event")+'</span></div>';
-  }).join("");
-}
-
-function kcRefreshBusinessUpgrade(){
-  renderAdsUpgraded();
-  renderLunarSpecialDaysUpgraded();
-  renderSolarSpecialDaysUpgraded();
-}
-
-window.KHERWAR_REFRESH_UPGRADE=kcRefreshBusinessUpgrade;
-
-function kcWrapSync(){
-  if(typeof window.sync!=="function" || window.sync.__kcWrapped) return;
-  const original=window.sync;
-  async function wrapped(){
-    const result=await original.apply(this,arguments);
-    setTimeout(kcRefreshBusinessUpgrade,80);
-    return result;
-  }
-  wrapped.__kcWrapped=true;
-  window.sync=wrapped;
-}
-
-function kcWatchCalendarNavigation(){
-  ["click","change"].forEach(function(evt){
-    document.addEventListener(evt,function(e){
-      if(e.target && (
-        e.target.id==="month-selector" ||
-        e.target.id==="year-selector" ||
-        e.target.closest?.("#prev-month") ||
-        e.target.closest?.("#next-month")
-      )){
-        setTimeout(kcRefreshBusinessUpgrade,180);
-      }
-    },true);
-  });
-}
-
-function init(){
-  kcWrapSync();
-  kcWatchCalendarNavigation();
-  setTimeout(kcRefreshBusinessUpgrade,700);
-}
-
-if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",init);
-else init();
-
+  window.renderSolarEventsFixed=function(){
+    const el=document.getElementById('solarList'); if(!el)return; const {y,m}=selectedYM();
+    const prefix=y+'-'+String(m+1).padStart(2,'0'); const arr=(db().solarEvents||[]).filter(e=>String(e.date||'').startsWith(prefix));
+    if(!arr.length){el.innerHTML='<div class="solar-item"><b>এই মাসে</b><span>কোনও সৌর বছরের বিশেষ দিন নেই</span></div>';return}
+    el.innerHTML=arr.map(e=>`<div class="solar-item"><b>${escK(e.date)}</b><span>${escK(e.title)}</span>${e.description?'<small>'+escK(e.description)+'</small>':''}${e.details?'<small>'+escK(e.details)+'</small>':''}${e.image?'<img src="'+escK(e.image)+'" style="width:100%;max-height:90px;object-fit:cover;border-radius:8px;margin-top:5px">':''}</div>`).join('');
+  };
+  function refresh(){window.renderLunarSpecialDaysFixed();window.renderSolarEventsFixed()}
+  // Ensure DB lunar events also appear on date cells.
+  const originalGet=window.getEventsForDate;
+  window.getEventsForDate=function(dateString){
+    let out=typeof originalGet==='function'?originalGet(dateString):[]; const d=new Date(dateString+'T12:00:00'); const ld=getLunarForDate(d);
+    if(ld){const order=(db().months||[]).find(mm=>mm.olchiki_name===ld.month)?.order; (db().events||[]).filter(e=>Number(e.month)===Number(order)&&Number(e.day)===Number(ld.day)).forEach(e=>out.push({title:e.title,bengaliTitle:'',santaliTitle:e.title,description:e.description||'',image:e.image||'',eventLabel:e.label||'',date:dateString,lunarEvent:true}));}
+    (db().solarEvents||[]).filter(e=>e.date===dateString).forEach(e=>out.push({title:e.title,bengaliTitle:e.title,santaliTitle:e.title,description:e.description||e.details||'',image:e.image||'',eventLabel:'Solar',date:dateString,solarEvent:true}));
+    return out;
+  };
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(refresh,700);});
+  ['change','click'].forEach(evt=>document.addEventListener(evt,function(e){if(e.target?.id==='month-selector'||e.target?.id==='year-selector'||e.target?.closest?.('.nav-btn'))setTimeout(refresh,250)},true));
+  setInterval(refresh,30000);
+  if('BroadcastChannel' in window){const c=new BroadcastChannel('kherwar-calendar-updates');c.onmessage=function(e){if(e.data==='data-updated')setTimeout(refresh,400)}}
 })();
 </script>
-
 </body>
 </html>
