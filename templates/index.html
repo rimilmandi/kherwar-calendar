@@ -5648,5 +5648,307 @@ if('BroadcastChannel' in window){
 })();
 </script>
 
+
+<!-- ============================================================
+ KHERWAR CALENDAR — DATE CELL DISPLAY FIX V5
+ Fixes:
+   1. The original getSantaliDate() is a lexical function declaration,
+      so assigning window.getSantaliDate() cannot replace it.
+   2. Rebuilds each rendered date-cell's numeric content from DB.
+   3. Shows English + Santali + Bengali numeric dates.
+   4. Keeps month-name labels on month-start cells.
+   5. NewMoon DB remains primary for Santali dates.
+ ============================================================ -->
+<style id="kherwar-date-cell-v5-css">
+#calendar .date .date-content.kherwar-v5-content{
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:center !important;
+    opacity:1 !important;
+    visibility:visible !important;
+    transform:none !important;
+    position:relative !important;
+    z-index:20 !important;
+    min-height:30px !important;
+    width:100% !important;
+    pointer-events:none !important;
+}
+#calendar .date .kherwar-v5-content .english-date,
+#calendar .date .kherwar-v5-content .santali-date,
+#calendar .date .kherwar-v5-content .bengali-date{
+    display:block !important;
+    opacity:1 !important;
+    visibility:visible !important;
+    position:relative !important;
+    z-index:21 !important;
+    line-height:1.15 !important;
+    height:auto !important;
+    min-height:0 !important;
+}
+#calendar .date .kherwar-v5-content .english-date{
+    font-weight:800 !important;
+}
+#calendar .date .kherwar-v5-content .santali-date{
+    font-weight:900 !important;
+    font-size:1rem !important;
+}
+#calendar .date .kherwar-v5-content .bengali-date{
+    font-weight:700 !important;
+    font-size:.72rem !important;
+}
+</style>
+
+<script id="kherwar-date-cell-v5">
+(function(){
+    "use strict";
+
+    const DB = () => window.KHERWAR_DB || {
+        months:[], newMoons:[], history:[], events:[], solarEvents:[], ads:[], settings:{}
+    };
+
+    const pad = n => String(n).padStart(2,"0");
+    const dateKey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    const parseDate = s => new Date(String(s)+"T12:00:00");
+
+    const OL = ["᱐","᱑","᱒","᱓","᱔","᱕","᱖","᱗","᱘","᱙"];
+    const BN = ["০","১","২","৩","৪","৫","৬","৭","৮","৯"];
+
+    const olNumber = n => String(n).split("").map(x => OL[Number(x)] ?? x).join("");
+    const bnNumber = n => String(n).split("").map(x => BN[Number(x)] ?? x).join("");
+
+    const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+
+    const fallbackMonths = {
+        1:"ᱢᱟᱜᱽ",
+        2:"ᱯᱷᱟᱹᱜᱩᱱ",
+        3:"ᱪᱟᱹᱛ",
+        4:"ᱵᱟᱹᱭᱥᱟᱹᱠ",
+        5:"ᱡᱷᱮᱸᱴ",
+        6:"ᱵᱟᱺᱰᱭᱟᱹ ᱡᱷᱮᱸᱴ",
+        7:"ᱟᱥᱟᱲ",
+        8:"ᱥᱟᱱ",
+        9:"ᱵᱷᱟᱫᱚᱨ",
+        10:"ᱫᱟᱸᱥᱟᱸᱭ",
+        11:"ᱥᱚᱨᱦᱟᱭ",
+        12:"ᱟᱸᱜᱷᱟᱲ",
+        13:"ᱯᱩᱥ"
+    };
+
+    function monthName(order){
+        const row = (DB().months||[]).find(m => Number(m.order) === Number(order));
+        return row?.olchiki_name || row?.english_name || fallbackMonths[Number(order)] || "";
+    }
+
+    function getLunarFromDB(ds){
+        const moons = (DB().newMoons||[])
+            .filter(x=>x && x.date)
+            .slice()
+            .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+
+        if(moons.length < 2) return null;
+
+        const K = String(ds);
+        const idx = moons.findIndex(x => String(x.date) >= K);
+        if(idx < 0 || !moons[idx-1]) return null;
+
+        const prev = moons[idx-1];
+        const next = moons[idx];
+
+        const start = parseDate(prev.date);
+        const end = parseDate(next.date);
+        const target = parseDate(K);
+
+        const length = Math.round((end-start)/86400000);
+        const day = Math.round((target-start)/86400000);
+
+        if(length < 1 || day < 1 || day > length) return null;
+
+        const order = Number(next.month_order);
+        if(!order) return null;
+
+        return {
+            month: monthName(order),
+            day,
+            monthOrder: order,
+            year: Number(next.lunar_year)||null
+        };
+    }
+
+    /*
+      Bengali source:
+      - First use the page's existing Bengali mapping when it exists.
+      - If no mapping exists for that Gregorian year, use HistoricalDate
+        only when an exact Bengali date was stored there.
+      - Do NOT silently copy the 2025 map into 1901; that would be false.
+    */
+    function getBengaliSafe(ds){
+        const d = parseDate(ds);
+
+        try{
+            if(typeof window.getBengaliDate === "function"){
+                const x = window.getBengaliDate(d);
+                const knownYears = [2025,2026,2027,2028,2029,2030,2031,2032,2033,2034,2035,2036,2037,2038,2039,2040,2041,2042,2043,2044,2045,2046,2047,2048,2049,2050];
+                /*
+                  The existing function falls back to 2025 for an unknown year.
+                  Only accept it automatically for years for which the page has
+                  a real mapping.
+                */
+                if(x && knownYears.includes(d.getFullYear())) return x;
+            }
+        }catch(e){}
+
+        const h = (DB().history||[]).find(x => String(x.date) === String(ds));
+        if(h){
+            const day = h.bDay ?? h.bengali_day ?? h.bengaliDay;
+            const month = h.bMonth ?? h.bengali_month ?? h.bengaliMonth;
+            const year = h.bYear ?? h.bengali_year ?? h.bengaliYear;
+            if(day && month){
+                return {
+                    day:Number(day),
+                    month:String(month),
+                    year:year ? Number(year) : null,
+                    color:"#1976d2"
+                };
+            }
+        }
+
+        return null;
+    }
+
+    function cellDateFromIndex(cell, index){
+        const existing = cell.dataset.date;
+        if(existing) return existing;
+
+        const selectY = document.getElementById("year-selector");
+        const selectM = document.getElementById("month-selector");
+        const y = Number(selectY?.value);
+        const m = Number(selectM?.value);
+
+        if(!Number.isFinite(y) || !Number.isFinite(m)) return null;
+
+        const firstDay = new Date(y,m,1).getDay();
+        const day = index - firstDay + 1;
+        const max = new Date(y,m+1,0).getDate();
+
+        if(day < 1 || day > max) return null;
+        return `${y}-${pad(m+1)}-${pad(day)}`;
+    }
+
+    function rebuildDateCells(){
+        const cells = [...document.querySelectorAll("#calendar .date")];
+
+        cells.forEach((cell,index)=>{
+            const ds = cellDateFromIndex(cell,index);
+            if(!ds) return;
+
+            cell.dataset.date = ds;
+
+            const d = parseDate(ds);
+            const lunar = getLunarFromDB(ds);
+            const bengali = getBengaliSafe(ds);
+
+            /*
+              The original page creates .date-content before the month-name
+              elements. We keep that structure but replace only its numeric
+              content, so event images and click handlers remain intact.
+            */
+            let content = cell.querySelector(".date-content");
+
+            if(!content){
+                content = document.createElement("div");
+                content.className = "date-content";
+                cell.insertBefore(content, cell.firstChild);
+            }
+
+            content.className = "date-content kherwar-v5-content";
+            content.classList.remove("hidden");
+            content.removeAttribute("hidden");
+            content.style.cssText =
+                "display:flex!important;" +
+                "flex-direction:column!important;" +
+                "align-items:center!important;" +
+                "justify-content:center!important;" +
+                "opacity:1!important;" +
+                "visibility:visible!important;" +
+                "transform:none!important;" +
+                "position:relative!important;" +
+                "z-index:20!important;" +
+                "min-height:30px!important;" +
+                "width:100%!important;";
+
+            const sunday = d.getDay() === 0 ? " sunday" : "";
+
+            content.innerHTML = `
+                <div class="english-date${sunday}">${d.getDate()}</div>
+                ${lunar ? `<div class="santali-date" style="color:${esc(lunar.color || "#388e3c")}">${olNumber(lunar.day)}</div>` : ""}
+                ${bengali ? `<div class="bengali-date" style="color:${esc(bengali.color || "#1976d2")}">${bnNumber(bengali.day)}</div>` : ""}
+            `;
+
+            /*
+              Month names are shown only on day 1, as before.
+              V5 also corrects the Santali month name from DB when available.
+            */
+            const existingS = cell.querySelector(".santali-month-name");
+            const existingB = cell.querySelector(".bengali-month-name");
+
+            if(lunar && lunar.day === 1){
+                if(existingS){
+                    existingS.textContent = lunar.month;
+                }else{
+                    const el = document.createElement("div");
+                    el.className = "santali-month-name";
+                    el.textContent = lunar.month;
+                    el.style.color = lunar.color || "#388e3c";
+                    cell.appendChild(el);
+                }
+            }
+
+            if(bengali && bengali.day === 1 && existingB){
+                existingB.textContent = bengali.month;
+            }
+        });
+
+        /*
+          Keep event background behind numeric date content.
+        */
+        cells.forEach(cell=>{
+            cell.querySelectorAll(".event-bg").forEach(img=>{
+                img.style.zIndex = "1";
+            });
+            const c = cell.querySelector(".kherwar-v5-content");
+            if(c) c.style.zIndex = "20";
+        });
+    }
+
+    const oldGenerate = window.generateCalendar;
+
+    if(typeof oldGenerate === "function"){
+        window.generateCalendar = function(){
+            oldGenerate.apply(this, arguments);
+            setTimeout(rebuildDateCells, 10);
+            setTimeout(rebuildDateCells, 100);
+        };
+    }
+
+    window.KHERWAR_REBUILD_DATE_CELLS_V5 = rebuildDateCells;
+
+    document.addEventListener("DOMContentLoaded",()=>{
+        setTimeout(rebuildDateCells,500);
+        setTimeout(rebuildDateCells,1200);
+    });
+
+    document.addEventListener("change",e=>{
+        if(e.target?.id==="year-selector" || e.target?.id==="month-selector"){
+            setTimeout(rebuildDateCells,100);
+            setTimeout(rebuildDateCells,350);
+        }
+    },true);
+
+})();
+</script>
+
 </body>
 </html>
