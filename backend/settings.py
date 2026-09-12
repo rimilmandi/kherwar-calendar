@@ -81,14 +81,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Railway-এর ডোমেইনের জন্য CSRF সেটআপ
 CSRF_TRUSTED_ORIGINS = [
-    'https://web-production-9ed61.up.railway.app',
+    'https://web-production-a2a89.up.railway.app',
     'https://kherwarcalendar.co.in',
     'https://www.kherwarcalendar.co.in',
 ]
 
-# লগইন এবং লগআউট সেটিংস
-LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/admin-panel/'   # লগইন সফল হলে অ্যাডমিন প্যানেলে যাবে
-LOGOUT_REDIRECT_URL = '/'
 
 
