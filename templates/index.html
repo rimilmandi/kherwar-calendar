@@ -5401,375 +5401,173 @@ if('BroadcastChannel' in window){
 })();
 </script>
 
-<style id="kherwar-v6-final-fix">
-/* V6 FINAL UI/DATE FIXES */
-#calendar .date-content,
-#calendar .date-content.hidden{
-  background:transparent !important;
-  border-radius:0 !important;
-  padding:0 !important;
-  box-shadow:none !important;
-  text-shadow:0 1px 2px rgba(255,255,255,.95) !important;
-  opacity:1 !important;
-  visibility:visible !important;
-  transform:none !important;
-  pointer-events:auto !important;
-  z-index:6 !important;
-}
-#calendar .date-content .english-date,
-#calendar .date-content .santali-date,
-#calendar .date-content .bengali-date{position:static !important;}
-#calendar .date .santali-month-name,
-#calendar .date .bengali-month-name{background:transparent !important;box-shadow:none !important;}
-#calendar .date .event-bg{z-index:1 !important;}
-#calendar .date .date-content{position:relative !important;}
-/* Month transition colours */
-#calendar .date.kherwar-month-red .santali-date,
-#calendar .date.kherwar-month-red .santali-month-name{color:#e53935 !important;}
-#calendar .date.kherwar-month-green .santali-date,
-#calendar .date.kherwar-month-green .santali-month-name{color:#388e3c !important;}
-#calendar .date.kherwar-newmoon .santali-date{color:#607d8b !important;}
-/* Keep event list in true chronological order */
-.events-container .event-track{display:flex !important;flex-direction:column !important;gap:10px !important;transform:none !important;animation:none !important;}
-.events-container .event-slide{width:100% !important;flex:0 0 auto !important;padding:0 !important;}
-</style>
-<script id="kherwar-v6-final-fix">
-(function(){
-  'use strict';
-  const DB=()=>window.KHERWAR_DB||{months:[],newMoons:[],history:[],events:[],solarEvents:[]};
-  const pad=n=>String(n).padStart(2,'0');
-  const key=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-  const localDate=s=>new Date(String(s)+'T12:00:00');
-  const ol={'0':'᱐','1':'᱑','2':'᱒','3':'᱓','4':'᱔','5':'᱕','6':'᱖','7':'᱗','8':'᱘','9':'᱙'};
-  const onum=n=>String(n).split('').map(x=>ol[x]||x).join('');
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
-  function monthName(order){
-    const m=(DB().months||[]).find(x=>Number(x.order)===Number(order));
-    return m?.olchiki_name || m?.english_name || '';
-  }
-  function lunar(d){
-    const K=key(d);
-    const moons=(DB().newMoons||[]).filter(x=>x.date).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
-    if(moons.length<2)return null;
-    let ni=moons.findIndex(x=>String(x.date)>=K);
-    if(ni<1)return null;
-    const boundary=moons[ni], prev=moons[ni-1];
-    const day=Math.round((localDate(K)-localDate(prev.date))/86400000);
-    if(day<1)return null;
-    return {day,monthOrder:Number(boundary.month_order),month:monthName(boundary.month_order),year:Number(boundary.lunar_year)||null,isNewMoon:String(boundary.date)===K};
-  }
-  function colorFor(order){
-    return Number(order)%2===1 ? '#e53935' : '#388e3c';
-  }
-  function bengaliSafe(d){
-    const y=d.getFullYear();
-    // The existing Bengali mapping is authoritative for years already supplied in the page.
-    // Do not silently use the 2025 fallback for older years.
-    if(y>=2025 && typeof getBengaliDate==='function'){
-      try{return getBengaliDate(d)||null;}catch(e){}
-    }
-    return null;
-  }
-
-  function rebuildDateCells(){
-    const ys=document.getElementById('year-selector'), ms=document.getElementById('month-selector');
-    const cal=document.getElementById('calendar');
-    if(!ys||!ms||!cal)return;
-    const y=Number(ys.value), m=Number(ms.value);
-    const first=new Date(y,m,1).getDay();
-    const total=new Date(y,m+1,0).getDate();
-    const cells=[...cal.querySelectorAll('.date')];
-    cells.forEach((cell,idx)=>{
-      const day=idx-first+1;
-      if(day<1||day>total)return;
-      const d=new Date(y,m,day), ds=key(d);
-      cell.dataset.date=ds;
-      const ld=lunar(d);
-      const b=bengaliSafe(d);
-      const dc=cell.querySelector('.date-content');
-      if(!dc)return;
-
-      // Always show English + Santali. Bengali is added where the page has a valid mapping.
-      let html=`<div class="english-date ${d.getDay()===0?'sunday':''}">${day}</div>`;
-      if(ld){
-        html+=`<div class="santali-date" style="color:${colorFor(ld.monthOrder)}">${onum(ld.day)}</div>`;
-      }
-      if(b){
-        html+=`<div class="bengali-date" style="color:${esc(b.color||'#1976d2')}">${typeof toBengaliNumber==='function'?toBengaliNumber(b.day):b.day}</div>`;
-      }
-      dc.innerHTML=html;
-      dc.classList.remove('hidden');
-      dc.style.opacity='1'; dc.style.visibility='visible'; dc.style.transform='none';
-
-      // Month-start labels are rebuilt from the DB so leap-month transitions are visible.
-      cell.querySelectorAll('.santali-month-name').forEach(x=>x.remove());
-      cell.classList.remove('kherwar-month-red','kherwar-month-green','kherwar-newmoon');
-      if(ld){
-        cell.classList.add((Number(ld.monthOrder)%2===1)?'kherwar-month-red':'kherwar-month-green');
-        if(ld.isNewMoon)cell.classList.add('kherwar-newmoon');
-        if(ld.day===1 && ld.month){
-          const el=document.createElement('div');
-          el.className='santali-month-name';
-          el.textContent=ld.month;
-          el.style.color=colorFor(ld.monthOrder);
-          cell.appendChild(el);
-        }
-      }
-    });
-  }
-
-  function ensureClock(){
-    const el=document.getElementById('time-display');
-    if(!el)return;
-    const update=()=>{
-      const now=new Date();
-      el.textContent=now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
-    };
-    update();
-    if(window.__kherwarClockTimer)clearInterval(window.__kherwarClockTimer);
-    window.__kherwarClockTimer=setInterval(update,1000);
-  }
-
-  function eventDate(el){
-    const s=el?.querySelector?.('.event-date')?.textContent||'';
-    const m=s.match(/(\d{4})[-\/](\d{2})[-\/](\d{2})/);
-    if(m)return `${m[1]}-${m[2]}-${m[3]}`;
-    const ds=el?.dataset?.date||el?.dataset?.goto||'';
-    return /^\d{4}-\d{2}-\d{2}$/.test(ds)?ds:'9999-12-31';
-  }
-  function sortEventList(){
-    const track=document.getElementById('event-track');
-    if(!track)return;
-    // Unwrap our DB addon so admin events participate in the same sort as the existing events.
-    const addon=track.querySelector('.db-event-list-addon');
-    if(addon){
-      [...addon.children].forEach(ch=>track.appendChild(ch));
-      addon.remove();
-    }
-    const items=[...track.children];
-    items.sort((a,b)=>eventDate(a).localeCompare(eventDate(b)));
-    items.forEach(x=>track.appendChild(x));
-  }
-
-  function runFix(){
-    rebuildDateCells();
-    ensureClock();
-    // V3 may append the DB event list after the existing list; sort everything afterwards.
-    setTimeout(()=>sortEventList(),20);
-  }
-
-  const oldGen=window.generateCalendar;
-  if(typeof oldGen==='function' && !window.__kherwarV6Gen){
-    window.__kherwarV6Gen=true;
-    window.generateCalendar=function(){
-      const r=oldGen.apply(this,arguments);
-      setTimeout(runFix,25);
-      return r;
-    };
-  }
-  const oldSync=window.sync;
-  if(typeof oldSync==='function' && !window.__kherwarV6Sync){
-    window.__kherwarV6Sync=true;
-    window.sync=async function(){
-      const r=await oldSync.apply(this,arguments);
-      setTimeout(runFix,80);
-      return r;
-    };
-  }
-  document.addEventListener('DOMContentLoaded',()=>setTimeout(runFix,400));
-  document.addEventListener('change',e=>{
-    if(e.target?.id==='year-selector'||e.target?.id==='month-selector')setTimeout(runFix,100);
-  },true);
-  window.KHERWAR_V6_READY=true;
-})();
-</script>
-
-
-<style id="kherwar-v7-santali-final">
-/* V7: Santali date must remain visible and must use DB when available,
-   with the original year-map as a safe fallback. */
-#calendar .date-content{opacity:1!important;visibility:visible!important;transform:none!important;z-index:6!important;background:transparent!important;padding:0!important;}
+<style id="kherwar-v8-final-stability">
+/* ===== KHERWAR V8 — SINGLE FINAL STABILITY LAYER ===== */
+#calendar,.calendar,.events-container{animation:none!important;}
+#calendar .date-content,#calendar .date-content.hidden{opacity:1!important;visibility:visible!important;transform:none!important;z-index:6!important;background:transparent!important;padding:0!important;pointer-events:auto!important;}
 #calendar .event-bg{z-index:1!important;}
-#calendar .santali-date{font-family:"Noto Sans Ol Chiki",sans-serif!important;font-weight:800!important;position:static!important;}
+#calendar .santali-date{font-family:"Noto Sans Ol Chiki",sans-serif!important;font-weight:800!important;display:block!important;visibility:visible!important;opacity:1!important;}
+#calendar .santali-month-name{font-family:"Noto Sans Ol Chiki",sans-serif!important;background:transparent!important;box-shadow:none!important;z-index:7!important;}
+#calendar .kherwar-month-red .santali-date,#calendar .kherwar-month-red .santali-month-name{color:#e53935!important;}
+#calendar .kherwar-month-green .santali-date,#calendar .kherwar-month-green .santali-month-name{color:#388e3c!important;}
+#calendar .kherwar-newmoon .santali-date{color:#607d8b!important;}
+.time-display{font-family:Arial,"Segoe UI",sans-serif!important;font-size:14px!important;font-weight:700!important;font-variant-numeric:tabular-nums!important;white-space:nowrap!important;letter-spacing:.02em!important;min-width:118px!important;text-align:center!important;line-height:1!important;}
+@media(max-width:600px){.time-display{font-size:12px!important;min-width:96px!important;}}
+.events-container .event-track{display:flex!important;flex-direction:column!important;gap:10px!important;transform:none!important;animation:none!important;}
+.events-container .event-slide{width:100%!important;flex:0 0 auto!important;padding:4px!important;}
 </style>
-<script id="kherwar-v7-santali-final">
+<script id="kherwar-v8-final-stability">
 (function(){
-  'use strict';
-  const DB=()=>window.KHERWAR_DB||{months:[],newMoons:[]};
-  const pad=n=>String(n).padStart(2,'0');
-  const key=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-  const pdate=s=>new Date(String(s)+'T12:00:00');
-  const ol={'0':'᱐','1':'᱑','2':'᱒','3':'᱓','4':'᱔','5':'᱕','6':'᱖','7':'᱗','8':'᱘','9':'᱙'};
-  const onum=n=>String(n).split('').map(x=>ol[x]||x).join('');
-
-  function dbMonthName(order){
-    const m=(DB().months||[]).find(x=>Number(x.order)===Number(order));
-    return m ? (m.olchiki_name || m.english_name || '') : '';
-  }
-
-  /*
-   * DB rule:
-   *   New Moon date = final day of the month named by that row.
-   *   The next Gregorian day = day 1 of the next lunar month.
-   * Therefore a date is resolved from the PREVIOUS New Moon and the
-   * NEXT New Moon. We deliberately require both boundaries; this prevents
-   * the last DB row from being incorrectly treated as the following month.
-   */
-  function lunarFromDBSafe(d){
-    try{
-      const K=key(d);
-      const moons=(DB().newMoons||[]).filter(x=>x && x.date).slice()
-        .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
-      if(moons.length<2) return null;
-
-      let ni=moons.findIndex(x=>String(x.date)>=K);
-      if(ni<1) return null;
-      const boundary=moons[ni];
-      const prev=moons[ni-1];
-      const prevDate=pdate(prev.date);
-      const boundaryDate=pdate(boundary.date);
-      const currentDate=pdate(K);
-      const length=Math.round((boundaryDate-prevDate)/86400000);
-      const day=Math.round((currentDate-prevDate)/86400000);
-      if(day<1 || day>length) return null;
-
-      const order=Number(boundary.month_order);
-      if(!order) return null;
-      return {
-        day,
-        monthOrder:order,
-        month:dbMonthName(order),
-        year:Number(boundary.lunar_year)||null,
-        color:(order%2===1?'#e53935':'#388e3c'),
-        isNewMoon:String(boundary.date)===K,
-        source:'db'
-      };
-    }catch(e){
-      console.warn('V7 lunar DB error:',e);
-      return null;
+'use strict';
+const DB=()=>window.KHERWAR_DB||{months:[],newMoons:[],history:[],events:[],solarEvents:[],ads:[],settings:{}};
+const pad=n=>String(n).padStart(2,'0');
+const key=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const localDate=s=>new Date(String(s)+'T12:00:00');
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ol={'0':'᱐','1':'᱑','2':'᱒','3':'᱓','4':'᱔','5':'᱕','6':'᱖','7':'᱗','8':'᱘','9':'᱙'};
+const onum=n=>String(n).split('').map(x=>ol[x]||x).join('');
+function santali(d){
+  try{
+    if(typeof getSantaliDate==='function'&&typeof getSantaliMonthMap==='function'){
+      const r=getSantaliDate(new Date(d.getFullYear(),d.getMonth(),d.getDate()),getSantaliMonthMap(d.getFullYear()));
+      if(r)return {...r,source:'map'};
     }
-  }
-
-  /* Original hard-coded Santali map remains the fallback. */
-  function mapFallback(d){
-    try{
-      if(typeof getSantaliDate!=='function' || typeof getSantaliMonthMap!=='function') return null;
-      return getSantaliDate(d,getSantaliMonthMap(d.getFullYear())) || null;
-    }catch(e){
-      console.warn('V7 Santali map fallback error:',e);
-      return null;
+  }catch(e){}
+  try{
+    const K=key(d), moons=(DB().newMoons||[]).filter(x=>x&&x.date).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    if(moons.length<2)return null;
+    const i=moons.findIndex(x=>String(x.date)>=K); if(i<1)return null;
+    const boundary=moons[i],prev=moons[i-1];
+    const day=Math.round((localDate(K)-localDate(prev.date))/86400000);
+    const len=Math.round((localDate(boundary.date)-localDate(prev.date))/86400000);
+    if(day<1||day>len)return null;
+    const order=Number(boundary.month_order); if(!order)return null;
+    const mm=(DB().months||[]).find(x=>Number(x.order)===order);
+    return {day,monthOrder:order,month:mm?.olchiki_name||mm?.english_name||'',year:Number(boundary.lunar_year)||null,color:order%2?'#e53935':'#388e3c',isNewMoon:String(boundary.date)===K,source:'db'};
+  }catch(e){return null;}
+}
+function resolveLunar(order,day,year){
+  order=Number(order);day=Number(day);year=Number(year);
+  if(!order||!day||!year)return null;
+  /* Prefer the original year map because it covers the full 1900–2050 UI. */
+  try{
+    const map=getSantaliMonthMap(year);
+    for(const m of map||[]){
+      if(Number.isFinite(order)&&Number(day)>0){
+        const normalized=(m.monthOrder!=null?Number(m.monthOrder):null);
+        const names={
+          'ᱢᱟᱜᱽ':1,'ᱯᱷᱟᱹᱜᱩᱱ':2,'ᱪᱟᱹᱛ':3,'ᱵᱟᱹᱭᱥᱟᱹᱠ':4,'ᱡᱷᱮᱸᱴ':5,
+          'ᱵᱟᱺᱰᱭᱟᱹ ᱡᱷᱮᱸᱴ':6,'ᱟᱥᱟᱲ':7,'ᱥᱟᱱ':8,'ᱵᱷᱟᱫᱚᱨ':9,'ᱫᱟᱸᱥᱟᱸᱭ':10,'ᱥᱚᱨᱦᱟᱭ':11,'ᱟᱸᱜᱷᱟᱲ':12,'ᱯᱩᱥ':12
+        };
+        const mo=normalized||names[String(m.month)]||null;
+        /* PUS becomes order 13 in leap years; detect by position/year map. */
+        const isPus=String(m.month)==='ᱯᱩᱥ';
+        const target=(isPus && (map||[]).length>=13)?13:mo;
+        if(target!==order)continue;
+        const start=new Date(m.startDate.getFullYear(),m.startDate.getMonth(),m.startDate.getDate());
+        const end=new Date(m.endDate.getFullYear(),m.endDate.getMonth(),m.endDate.getDate());
+        const len=Math.round((end-start)/86400000)+1;
+        if(day<=len){const d=new Date(start);d.setDate(d.getDate()+day-1);return {date:key(d),day,year:m.year||year+3000,month:m.month,monthOrder:order,color:m.color|| (order%2?'#e53935':'#388e3c')};}
+      }
     }
-  }
-
-  function resolve(d){
-    return lunarFromDBSafe(d) || mapFallback(d);
-  }
-
-  function repaint(){
-    const ys=document.getElementById('year-selector');
-    const ms=document.getElementById('month-selector');
-    const cal=document.getElementById('calendar');
-    if(!ys||!ms||!cal) return;
-    const y=Number(ys.value), m=Number(ms.value);
-    const first=new Date(y,m,1).getDay();
-    const total=new Date(y,m+1,0).getDate();
-    const cells=[...cal.querySelectorAll('.date')];
-
-    cells.forEach((cell,idx)=>{
-      const day=idx-first+1;
-      if(day<1 || day>total) return;
-      const d=new Date(y,m,day);
-      const ld=resolve(d);
-      const dc=cell.querySelector('.date-content');
-      if(!dc) return;
-
-      /* Keep the existing English/Bengali content, but guarantee Santali. */
-      let santali=dc.querySelector('.santali-date');
-      if(!santali) {
-        santali=document.createElement('div');
-        santali.className='santali-date';
-        dc.appendChild(santali);
-      }
-
-      if(ld && Number.isFinite(Number(ld.day))){
-        santali.textContent=onum(ld.day);
-        santali.style.color=ld.color || '#388e3c';
-        santali.style.display='block';
-        santali.style.visibility='visible';
-        santali.style.opacity='1';
-
-        cell.classList.remove('kherwar-month-red','kherwar-month-green','kherwar-newmoon');
-        cell.classList.add(Number(ld.monthOrder)%2===1?'kherwar-month-red':'kherwar-month-green');
-        if(ld.isNewMoon) cell.classList.add('kherwar-newmoon');
-
-        /* Rebuild only the Santali month label. */
-        cell.querySelectorAll('.santali-month-name').forEach(x=>x.remove());
-        if(ld.day===1 && ld.month){
-          const label=document.createElement('div');
-          label.className='santali-month-name';
-          label.textContent=ld.month;
-          label.style.color=ld.color || '#388e3c';
-          cell.appendChild(label);
-        }
-      }else{
-        /* If there is no DB boundary, the map fallback should normally work. */
-        santali.textContent='';
-        santali.style.display='none';
-        cell.querySelectorAll('.santali-month-name').forEach(x=>x.remove());
-      }
-
-      dc.classList.remove('hidden');
-      dc.style.cssText += ';opacity:1!important;visibility:visible!important;transform:none!important;z-index:6!important;background:transparent!important;padding:0!important;';
-      cell.dataset.date=key(d);
-    });
-  }
-
-  function clock(){
-    const el=document.getElementById('time-display');
-    if(!el)return;
-    el.textContent=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
-  }
-
-  /* Final wrapper: all previous calendar generation is allowed to run first,
-     then V7 paints the Santali date from the correct source. */
-  const oldGenerate=window.generateCalendar;
-  if(typeof oldGenerate==='function' && !window.__KHERWAR_V7_GENERATE){
-    window.__KHERWAR_V7_GENERATE=true;
-    window.generateCalendar=function(){
-      const r=oldGenerate.apply(this,arguments);
-      setTimeout(repaint,30);
-      setTimeout(clock,30);
-      return r;
-    };
-  }
-
-  const oldSync=window.sync;
-  if(typeof oldSync==='function' && !window.__KHERWAR_V7_SYNC){
-    window.__KHERWAR_V7_SYNC=true;
-    window.sync=async function(){
-      const r=await oldSync.apply(this,arguments);
-      setTimeout(repaint,120);
-      setTimeout(clock,120);
-      return r;
-    };
-  }
-
-  document.addEventListener('DOMContentLoaded',()=>{
-    setTimeout(repaint,500);
-    setTimeout(repaint,1500);
-    clock();
+  }catch(e){}
+  /* DB fallback: event day 1 is the day after previous New Moon. */
+  try{
+    const moons=(DB().newMoons||[]).filter(x=>x&&x.date).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    for(let i=1;i<moons.length;i++){
+      const end=moons[i],start=moons[i-1];
+      if(Number(end.month_order)!==order)continue;
+      const d=new Date(localDate(start.date)); d.setDate(d.getDate()+day);
+      if(d.getFullYear()===year)return {date:key(d),day,year:Number(end.lunar_year)||year+3000,month:(DB().months||[]).find(x=>Number(x.order)===order)?.olchiki_name||'',monthOrder:order,color:order%2?'#e53935':'#388e3c'};
+    }
+  }catch(e){}
+  return null;
+}
+function bengali(d){try{return typeof getBengaliDate==='function'?getBengaliDate(d):null}catch(e){return null}}
+function repaintCalendar(){
+  const ys=document.getElementById('year-selector'),ms=document.getElementById('month-selector'),cal=document.getElementById('calendar');
+  if(!ys||!ms||!cal)return;
+  const y=Number(ys.value),m=Number(ms.value),first=new Date(y,m,1).getDay(),total=new Date(y,m+1,0).getDate();
+  [...cal.querySelectorAll('.date')].forEach((cell,idx)=>{
+    const day=idx-first+1;if(day<1||day>total)return;
+    const d=new Date(y,m,day),ld=santali(d),dc=cell.querySelector('.date-content');if(!dc)return;
+    let sd=dc.querySelector('.santali-date');if(!sd){sd=document.createElement('div');sd.className='santali-date';dc.appendChild(sd);}
+    if(ld){sd.textContent=onum(ld.day);sd.style.color=ld.color||'#388e3c';sd.style.display='block';sd.style.visibility='visible';sd.style.opacity='1';}
+    else{sd.textContent='';sd.style.display='none';}
+    dc.classList.remove('hidden');dc.style.opacity='1';dc.style.visibility='visible';dc.style.transform='none';dc.style.background='transparent';dc.style.padding='0';
+    cell.dataset.date=key(d);
+    cell.classList.remove('kherwar-month-red','kherwar-month-green','kherwar-newmoon');
+    cell.querySelectorAll('.santali-month-name').forEach(x=>x.remove());
+    if(ld){cell.classList.add(Number(ld.monthOrder)%2?'kherwar-month-red':'kherwar-month-green');if(ld.isNewMoon)cell.classList.add('kherwar-newmoon');if(ld.day===1&&ld.month){const x=document.createElement('div');x.className='santali-month-name';x.textContent=ld.month;x.style.color=ld.color||'#388e3c';cell.appendChild(x);}}
   });
-  document.addEventListener('change',e=>{
-    if(e.target && (e.target.id==='year-selector'||e.target.id==='month-selector')){
-      setTimeout(repaint,120);
-      setTimeout(repaint,500);
-    }
-  },true);
-  setInterval(clock,1000);
-  window.KHERWAR_V7_READY=true;
+}
+function stableClock(){
+  const el=document.getElementById('time-display');if(!el)return;
+  const n=new Date();
+  let h=n.getHours(),ap=h>=12?'PM':'AM';h=h%12||12;
+  el.textContent=`${String(h).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}:${String(n.getSeconds()).padStart(2,'0')} ${ap}`;
+}
+function changeType(type){
+  if(!['english','bengali','santali'].includes(type))type='english';
+  currentCalendarType=type;
+  document.querySelectorAll('.calendar-type-btn').forEach((b,i)=>b.classList.toggle('active',i===(type==='english'?0:type==='bengali'?1:2)));
+  /* The base renderer already understands this variable. Only one redraw. */
+  try{window.generateCalendar&&window.generateCalendar();}catch(e){}
+  setTimeout(repaintCalendar,30);
+  setTimeout(updateHeaderStable,35);
+}
+function updateHeaderStable(){
+  const h=document.getElementById('calendar-header'),ys=document.getElementById('year-selector'),ms=document.getElementById('month-selector');if(!h||!ys||!ms)return;
+  const y=Number(ys.value),m=Number(ms.value),names=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const d=new Date(y,m,1),e=new Date(y,m,new Date(y,m+1,0).getDate()),a=santali(d),b=santali(e),today=new Date(),td=santali(today),sday=(typeof santaliDays!=='undefined'?santaliDays[today.getDay()]:'');
+  if(currentCalendarType==='santali')h.innerHTML=`<span class="santali-header">${a&&b?(a.month===b.month?`${a.month} ${onum(a.year)}`:`${a.month}-${b.month} ${onum(a.year)}`):''}</span>`;
+  else if(currentCalendarType==='bengali'){const b1=bengali(d),b2=bengali(e);h.innerHTML=`<span class="english-header">${b1&&b2?(b1.month===b2.month?`${b1.month} ${toBengaliNumber(b1.year)}`:`${b1.month}-${b2.month} ${toBengaliNumber(b1.year)}`):`${names[m]} ${y}`}</span>`;}
+  else h.innerHTML=`<span class="english-header">${names[m]} ${y}</span><span> | </span><span class="santali-header">${td?`${sday}, ${onum(td.day)} ${td.month} ${onum(td.year)}`:''}</span>`;
+}
+function eventRows(year,month){
+  const rows=[];
+  const add=(date,e,kind)=>{if(!date)return;const d=localDate(date);if(d.getFullYear()===year&&d.getMonth()===month)rows.push({date:key(d),e,kind});};
+  /* Existing fixed/variable/moon events */
+  try{
+    Object.keys(fixedEvents||{}).forEach(md=>{const [mm,dd]=md.split('-').map(Number);if(mm-1===month)add(key(new Date(year,month,dd)),{...(fixedEvents[md]||{})},'fixed');});
+  }catch(e){}
+  try{if(variableEvents?.[year])Object.keys(variableEvents[year]).forEach(ds=>{const d=localDate(ds);if(d.getMonth()===month&&d.getFullYear()===year)add(ds,{...(variableEvents[year][ds]||{})},'variable');});}catch(e){}
+  try{Object.keys(moonPhases||{}).forEach(ds=>{const d=localDate(ds);if(d.getMonth()===month&&d.getFullYear()===year){const full=moonPhases[ds]==='fullmoon';add(ds,{title:full?'ᱯᱩᱱᱱᱤᱢᱟ':'ᱟᱢᱟᱣᱥᱮ',description:full?'Full Moon':'New Moon',bengaliTitle:full?'পূর্ণিমা':'অমাবস্যা',image:full?'/static/images/fullmoon.png':'/static/images/newmoon.png'},'moon');}});}catch(e){}
+  (DB().solarEvents||[]).forEach(e=>{if(e.date)add(e.date,{title:e.title,description:e.description||e.details||'',bengaliTitle:e.title,image:e.image||''},'solar');});
+  (DB().events||[]).forEach(e=>{const r=resolveLunar(e.month,e.day,year);if(r){const d=localDate(r.date);if(d.getMonth()===month)add(r.date,{...e},'lunar');}});
+  rows.sort((a,b)=>a.date.localeCompare(b.date));
+  const seen=new Set();return rows.filter(r=>{const k=r.date+'|'+(r.e.title||'');if(seen.has(k))return false;seen.add(k);return true;});
+}
+function renderEvents(){
+  const track=document.getElementById('event-track'),controls=document.getElementById('carousel-controls'),ys=document.getElementById('year-selector'),ms=document.getElementById('month-selector');if(!track||!ys||!ms)return;
+  const y=Number(ys.value),m=Number(ms.value),rows=eventRows(y,m);track.innerHTML='';if(controls)controls.innerHTML='';
+  if(!rows.length){track.innerHTML='<div class="event-slide"><div class="event-item"><div class="event-details"><h3>এই মাসে কোনো বিশেষ দিন নেই</h3><p>বিশেষ দিবস, পূর্ণিমা ও অমাবস্যার তথ্য এখানে দেখানো হবে।</p></div></div></div>';return;}
+  rows.forEach(r=>{const d=localDate(r.date),sd=santali(d),bd=bengali(d),slide=document.createElement('div');slide.className='event-slide';slide.innerHTML=`<div class="event-item">${r.e.image?`<img src="${esc(r.e.image)}" alt="" class="event-image-large" loading="lazy">`:''}<div class="event-details"><h3>${esc(r.e.title||'')}</h3>${r.e.description?`<p>${esc(r.e.description)}</p>`:''}<p class="event-date">${d.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})}${bd?` • ${toBengaliNumber(bd.day)} ${esc(bd.month)} ${toBengaliNumber(bd.year)}`:''}${sd?` • ${onum(sd.day)} ${esc(sd.month)} ${onum(sd.year)}`:''}</p></div></div>`;track.appendChild(slide);});
+}
+function renderCards(){
+  const y=Number(document.getElementById('year-selector')?.value||new Date().getFullYear());
+  const solar=document.getElementById('solarList');
+  if(solar){const rows=[];[['03','20/21','বসন্ত বিষুব — Spring Equinox','দিন ও রাত প্রায় সমান'],['06','20/21','গ্রীষ্ম অয়ন — Summer Solstice','উত্তর গোলার্ধে দীর্ঘতম দিন'],['09','22/23','শরৎ বিষুব — Autumn Equinox','দিন ও রাত প্রায় সমান'],['12','21/22','শীত অয়ন — Winter Solstice','উত্তর গোলার্ধে দীর্ঘতম রাত']].forEach(x=>rows.push({date:`${y}-${x[0]}`,display:x[1],title:x[2],description:x[3]}));(DB().solarEvents||[]).filter(e=>String(e.date||'').startsWith(y+'-')).forEach(e=>rows.push({date:e.date,display:e.date.slice(5),title:e.title,description:e.description,details:e.details,image:e.image}));rows.sort((a,b)=>a.date.localeCompare(b.date));solar.innerHTML=rows.map(x=>`<div class="solar-item" data-goto="${esc(x.date)}"><b>${esc(x.display)}</b><span>${esc(x.title)}</span>${x.description?`<small>${esc(x.description)}</small>`:''}${x.details?`<small>${esc(x.details)}</small>`:''}${x.image?`<img src="${esc(x.image)}" alt="" loading="lazy">`:''}</div>`).join('');}
+  const lunar=document.getElementById('lunarList');if(lunar){const rows=(DB().events||[]).map(e=>({...e,resolved:resolveLunar(e.month,e.day,y)})).filter(x=>x.resolved).sort((a,b)=>a.resolved.date.localeCompare(b.resolved.date));lunar.innerHTML=rows.length?rows.map(x=>{const r=x.resolved,b=bengali(localDate(r.date));return `<div class="lunar-item" data-goto="${esc(r.date)}"><b>${esc(r.month)} ${onum(x.day)}</b><span>${esc(x.title||'')}</span>${x.label?`<small>${esc(x.label)}</small>`:''}${x.description?`<small>${esc(x.description)}</small>`:''}<span class="fixed-date">English: ${esc(localDate(r.date).toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'}))}</span><div class="lunar-year-note">Lunar year: ${onum(r.year)}</div>${b?`<small>বাংলা: ${toBengaliNumber(b.day)} ${esc(b.month)} ${toBengaliNumber(b.year)}</small>`:''}${x.image?`<img src="${esc(x.image)}" alt="" loading="lazy">`:''}</div>`}).join(''):'<div class="lunar-item"><b>🌙 চন্দ্রমাসের বিশেষ দিন</b><span>Admin Panel-এ কোনো fixed lunar event যোগ করা হয়নি।</span></div>';}
+  document.querySelectorAll('[data-goto]').forEach(el=>{if(!el.dataset.v8bound){el.dataset.v8bound='1';el.addEventListener('click',()=>window.kherwarFocusGregorianDate?window.kherwarFocusGregorianDate(el.dataset.goto):null);}});
+}
+function redraw(){repaintCalendar();updateHeaderStable();renderEvents();renderCards();stableClock();}
+/* Expose button handler so inline onclick always resolves. */
+window.changeCalendarType=changeType;
+/* One stable wrapper around whatever renderer exists at this point. */
+const baseGenerate=window.generateCalendar;
+if(typeof baseGenerate==='function'&&!window.__KHERWAR_V8_GENERATE){window.__KHERWAR_V8_GENERATE=true;window.generateCalendar=function(){const r=baseGenerate.apply(this,arguments);setTimeout(redraw,0);return r;};}
+/* Replace sync with a single fetch path. This removes the nested V3/V6/V7 sync chain that caused redraw flicker. */
+window.sync=async function(){
+  try{const r=await fetch('/api/calendar/bootstrap/',{credentials:'same-origin',headers:{'X-Requested-With':'XMLHttpRequest'}});if(!r.ok)throw Error('Database read failed');const data=await r.json();const old=JSON.stringify(window.KHERWAR_DB||{});window.KHERWAR_DB=data;const changed=old!==JSON.stringify(data);if(typeof renderAds==='function')renderAds();if(changed||!document.querySelector('#calendar .date')){try{window.generateCalendar?.()}catch(e){}}setTimeout(redraw,20);return data;}catch(e){console.warn('Kherwar V8 sync failed:',e);setTimeout(redraw,20);return null;}
+};
+/* Stable selector handlers — no duplicate redraw calls. */
+document.addEventListener('change',e=>{if(e.target?.id==='year-selector'||e.target?.id==='month-selector'){setTimeout(()=>{try{window.generateCalendar?.()}catch(x){}},0);}},true);
+document.addEventListener('DOMContentLoaded',()=>{setTimeout(redraw,300);setTimeout(()=>window.sync?.(),450);});
+/* Remove every old clock interval created by previous layers as far as possible by using one visible updater. */
+stableClock();setInterval(stableClock,1000);
+window.KHERWAR_V8_READY=true;
 })();
 </script>
-
 </body>
 </html>
