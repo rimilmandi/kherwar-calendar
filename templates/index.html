@@ -5391,7 +5391,7 @@ document.addEventListener('change',e=>{
 document.addEventListener('click',e=>{
   if(e.target?.closest?.('.nav-btn'))setTimeout(refreshV3,220);
 },true);
-
+setInterval(refreshV3,30000);
 
 if('BroadcastChannel' in window){
   const c=new BroadcastChannel('kherwar-calendar-updates');
@@ -5433,398 +5433,155 @@ if('BroadcastChannel' in window){
 .events-container .event-track{display:flex !important;flex-direction:column !important;gap:10px !important;transform:none !important;animation:none !important;}
 .events-container .event-slide{width:100% !important;flex:0 0 auto !important;padding:0 !important;}
 </style>
-
-<style id="kherwar-v7-santali-final">
-/* V7: Santali date must remain visible and must use DB when available,
-   with the original year-map as a safe fallback. */
-#calendar .date-content{opacity:1!important;visibility:visible!important;transform:none!important;z-index:6!important;background:transparent!important;padding:0!important;}
-#calendar .event-bg{z-index:1!important;}
-#calendar .santali-date{font-family:"Noto Sans Ol Chiki",sans-serif!important;font-weight:800!important;position:static!important;}
-</style>
-<script id="kherwar-master-fix">
+<script id="kherwar-v6-final-fix">
 (function(){
-"use strict";
+  'use strict';
+  const DB=()=>window.KHERWAR_DB||{months:[],newMoons:[],history:[],events:[],solarEvents:[]};
+  const pad=n=>String(n).padStart(2,'0');
+  const key=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const localDate=s=>new Date(String(s)+'T12:00:00');
+  const ol={'0':'᱐','1':'᱑','2':'᱒','3':'᱓','4':'᱔','5':'᱕','6':'᱖','7':'᱗','8':'᱘','9':'᱙'};
+  const onum=n=>String(n).split('').map(x=>ol[x]||x).join('');
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-/* ============================================================
-   KHERWAR MASTER FIX — সব ত্রুটি একসাথে সমাধান
-   ============================================================ */
-
-const DB = () => window.KHERWAR_DB || {months:[], newMoons:[], history:[], events:[], solarEvents:[], ads:[], settings:{}};
-const pad = n => String(n).padStart(2,'0');
-const key = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-const pdate = s => new Date(String(s)+'T12:00:00');
-const ol = {'0':'᱐','1':'᱑','2':'᱒','3':'᱓','4':'᱔','5':'᱕','6':'᱖','7':'᱗','8':'᱘','9':'᱙'};
-const onum = n => String(n).split('').map(x=>ol[x]||x).join('');
-const esc = v => String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
-/* ---------- মাসের রঙ: মাসের নাম অনুযায়ী ---------- */
-const MONTH_COLORS = {
-  'ᱯᱩᱥ': '#0d6efd', 'ᱢᱟᱜᱽ': '#dc3545', 'ᱯᱷᱟᱹᱜᱩᱱ': '#0d6efd',
-  'ᱪᱟᱹᱛ': '#dc3545', 'ᱵᱟᱹᱭᱥᱟᱹᱠ': '#0d6efd', 'ᱡᱷᱮᱸᱴ': '#dc3545',
-  'ᱵᱟᱺᱰᱭᱟᱹ ᱡᱷᱮᱸᱴ': '#fd7e14', 'ᱟᱥᱟᱲ': '#0d6efd', 'ᱥᱟᱱ': '#dc3545',
-  'ᱵᱷᱟᱫᱚᱨ': '#0d6efd', 'ᱫᱟᱸᱥᱟᱸᱭ': '#dc3545', 'ᱥᱚᱨᱦᱟᱭ': '#0d6efd',
-  'ᱟᱸᱜᱷᱟᱲ': '#dc3545'
-};
-function colorFor(order){
-  const m = (DB().months||[]).find(x=>Number(x.order)===Number(order));
-  if(m && m.olchiki_name && MONTH_COLORS[m.olchiki_name]) return MONTH_COLORS[m.olchiki_name];
-  return Number(order) % 2 === 1 ? '#dc3545' : '#0d6efd';
-}
-
-/* ---------- বাংলা সংখ্যা ---------- */
-function toBn(n){
-  const b = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
-  return String(n).split('').map(x=>b[+x]??x).join('');
-}
-
-/* ============================================================
-   ১. টাইম ডিসপ্লে — স্থির ফন্ট, ১২-ঘণ্টা, AM/PM
-   ============================================================ */
-let clockTimer = null;
-function startClock(){
-  if (clockTimer) clearInterval(clockTimer);
-  const el = document.getElementById('time-display');
-  if (!el) return;
-  el.style.fontSize = '0.85rem';
-  el.style.fontWeight = '700';
-  el.style.letterSpacing = '0.05em';
-  el.style.fontFamily = "'Noto Sans Bengali', system-ui, sans-serif";
-  el.style.minWidth = '110px';
-  el.style.textAlign = 'center';
-  el.style.fontVariantNumeric = 'tabular-nums';
-  function tick(){
-    const now = new Date();
-    let h = now.getHours();
-    const m = pad(now.getMinutes());
-    const s = pad(now.getSeconds());
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 || 12;
-    el.textContent = `${pad(h)}:${m}:${s} ${ampm}`;
+  function monthName(order){
+    const m=(DB().months||[]).find(x=>Number(x.order)===Number(order));
+    return m?.olchiki_name || m?.english_name || '';
   }
-  tick();
-  clockTimer = setInterval(tick, 1000);
-}
-
-/* ============================================================
-   ২. ক্যালেন্ডার টাইপ বাটন — English / বাংলা / ᱥᱟᱱᱛᱟᱲᱤ
-   ============================================================ */
-window.changeCalendarType = function(type){
-  window.currentCalendarType = type;
-  document.querySelectorAll('.calendar-type-btn').forEach(btn=>{
-    btn.classList.remove('active');
-    const t = btn.textContent.trim().toLowerCase();
-    if (
-      (type==='english' && t.includes('english')) ||
-      (type==='bengali' && t.includes('বাংলা')) ||
-      (type==='santali' && t.includes('ᱥᱟᱱ'))
-    ) btn.classList.add('active');
-  });
-  rebuildCalendar();
-  if (typeof updateCalendarHeader === 'function') updateCalendarHeader();
-};
-
-/* ============================================================
-   ৩. সাঁওতালি তারিখ — DB থেকে, fallback map
-   ============================================================ */
-function santaliFromDB(d){
-  try{
-    const K = key(d);
-    const moons = (DB().newMoons||[]).filter(x=>x.date).slice()
-      .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
-    if (moons.length < 2) return null;
-    let ni = moons.findIndex(x=>String(x.date) >= K);
-    if (ni < 1) return null;
-    const boundary = moons[ni];
-    const prev = moons[ni-1];
-    const prevDate = pdate(prev.date);
-    const boundaryDate = pdate(boundary.date);
-    const current = pdate(K);
-    const len = Math.round((boundaryDate - prevDate)/86400000);
-    const day = Math.round((current - prevDate)/86400000);
-    if (day < 1 || day > len) return null;
-    const order = Number(boundary.month_order);
-    if (!order) return null;
-    const mObj = (DB().months||[]).find(x=>Number(x.order)===order);
-    return {
-      day,
-      monthOrder: order,
-      month: mObj ? (mObj.olchiki_name || mObj.english_name || '') : '',
-      year: Number(boundary.lunar_year) || null,
-      color: colorFor(order),
-      isNewMoon: String(boundary.date) === K
-    };
-  }catch(e){ console.warn('santaliFromDB', e); return null; }
-}
-
-function santaliFromMap(d){
-  try{
-    if (typeof getSantaliDate !== 'function' || typeof getSantaliMonthMap !== 'function') return null;
-    const s = getSantaliDate(d, getSantaliMonthMap(d.getFullYear()));
-    if (!s) return null;
-    return {
-      day: s.day,
-      monthOrder: null,
-      month: s.month || '',
-      year: s.year || null,
-      color: s.color || '#388e3c',
-      isNewMoon: false
-    };
-  }catch(e){ return null; }
-}
-
-function resolveSantali(d){
-  return santaliFromDB(d) || santaliFromMap(d);
-}
-
-/* ============================================================
-   ৪. বাংলা তারিখ
-   ============================================================ */
-function resolveBengali(d){
-  try{
-    if (typeof getBengaliDate !== 'function') return null;
-    const y = d.getFullYear();
-    if (y < 2025) return null;
-    return getBengaliDate(d) || null;
-  }catch(e){ return null; }
-}
-
-/* ============================================================
-   ৫. ক্যালেন্ডার রিবিল্ড — সব ধরনের তারিখ দেখানো
-   ============================================================ */
-function rebuildCalendar(){
-  const cal = document.getElementById('calendar');
-  if (!cal) return;
-  const ys = document.getElementById('year-selector');
-  const ms = document.getElementById('month-selector');
-  if (!ys || !ms) return;
-  const y = Number(ys.value);
-  const m = Number(ms.value);
-  const first = new Date(y,m,1).getDay();
-  const total = new Date(y,m+1,0).getDate();
-  const type = window.currentCalendarType || 'english';
-  const cells = [...cal.querySelectorAll('.date')];
-
-  cells.forEach((cell, idx)=>{
-    const day = idx - first + 1;
-    if (day < 1 || day > total) return;
-    const d = new Date(y,m,day);
-    const ds = key(d);
-    const isSunday = d.getDay() === 0;
-    const santali = resolveSantali(d);
-    const bengali = resolveBengali(d);
-
-    cell.dataset.date = ds;
-    cell.classList.toggle('sunday', isSunday);
-    cell.classList.remove('kherwar-month-red','kherwar-month-green','kherwar-newmoon');
-
-    if (santali && santali.monthOrder){
-      cell.classList.add(Number(santali.monthOrder)%2===1 ? 'kherwar-month-red' : 'kherwar-month-green');
-      if (santali.isNewMoon) cell.classList.add('kherwar-newmoon');
-    }
-
-    /* --- date-content পুনর্গঠন --- */
-    const dc = cell.querySelector('.date-content');
-    if (!dc) return;
-    dc.classList.remove('hidden');
-    dc.style.cssText = 'opacity:1;visibility:visible;transform:none;z-index:6;position:relative;background:transparent;padding:0;';
-
-    let html = '';
-    if (type === 'english'){
-      html += `<div class="english-date${isSunday?' sunday':''}">${day}</div>`;
-      if (santali) html += `<div class="santali-date" style="color:${santali.color}">${onum(santali.day)}</div>`;
-      if (bengali) html += `<div class="bengali-date" style="color:${bengali.color||'#1976d2'}">${toBn(bengali.day)}</div>`;
-    } else if (type === 'bengali'){
-      if (bengali) html += `<div class="bengali-date" style="color:${bengali.color||'#1976d2'}">${toBn(bengali.day)}</div>`;
-      html += `<div class="english-date${isSunday?' sunday':''}">${day}</div>`;
-      if (santali) html += `<div class="santali-date" style="color:${santali.color}">${onum(santali.day)}</div>`;
-    } else { /* santali */
-      if (santali) html += `<div class="santali-date" style="color:${santali.color}">${onum(santali.day)}</div>`;
-      html += `<div class="english-date${isSunday?' sunday':''}">${day}</div>`;
-      if (bengali) html += `<div class="bengali-date" style="color:${bengali.color||'#1976d2'}">${toBn(bengali.day)}</div>`;
-    }
-    dc.innerHTML = html;
-
-    /* --- মাসের নাম (১ তারিখে) --- */
-    cell.querySelectorAll('.santali-month-name,.bengali-month-name').forEach(x=>x.remove());
-    if (santali && santali.day === 1 && santali.month){
-      const el = document.createElement('div');
-      el.className = 'santali-month-name';
-      el.textContent = santali.month;
-      el.style.color = santali.color;
-      cell.appendChild(el);
-    }
-    if (bengali && bengali.day === 1 && bengali.month){
-      const el = document.createElement('div');
-      el.className = 'bengali-month-name';
-      el.textContent = bengali.month;
-      el.style.color = bengali.color || '#1976d2';
-      cell.appendChild(el);
-    }
-  });
-}
-
-/* ============================================================
-   ৬. ইভেন্ট লিস্ট — V3 এর `setupEventCarousel` কে override না করে
-      শুধু chronological sort ও DB event display
-   ============================================================ */
-function getEventSortDate(el){
-  const ds = el?.dataset?.date || el?.dataset?.goto || '';
-  if (/^\d{4}-\d{2}-\d{2}$/.test(ds)) return ds;
-  const txt = el?.querySelector?.('.event-date')?.textContent || '';
-  const m = txt.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
-  if (m) return `${m[1]}-${pad(m[2])}-${pad(m[3])}`;
-  return '9999-12-31';
-}
-function sortEvents(){
-  const track = document.getElementById('event-track');
-  if (!track) return;
-  const slides = [...track.querySelectorAll('.event-slide')];
-  slides.sort((a,b)=>getEventSortDate(a).localeCompare(getEventSortDate(b)));
-  slides.forEach(s=>track.appendChild(s));
-}
-
-/* ============================================================
-   ৭. চন্দ্রমাস কার্ড — English + Lunar year fallback
-   ============================================================ */
-function resolveLunarEvent(order, day, gYear){
-  order = Number(order); day = Number(day);
-  if (!order || !day) return null;
-  const moons = (DB().newMoons||[]).filter(x=>x.date).slice()
-    .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
-  if (moons.length < 2) return null;
-  for (let i=1; i<moons.length; i++){
-    const end = moons[i];
-    const start = moons[i-1];
-    if (Number(end.month_order) !== order) continue;
-    const sd = pdate(start.date);
-    const ed = pdate(end.date);
-    const len = Math.round((ed-sd)/86400000);
-    if (day < 1 || day > len) continue;
-    const cand = new Date(sd);
-    cand.setDate(cand.getDate() + day);
-    if (cand.getFullYear() === Number(gYear)){
-      return { date: key(cand), lunarYear: end.lunar_year || null, monthOrder: order, day };
-    }
+  function lunar(d){
+    const K=key(d);
+    const moons=(DB().newMoons||[]).filter(x=>x.date).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    if(moons.length<2)return null;
+    let ni=moons.findIndex(x=>String(x.date)>=K);
+    if(ni<1)return null;
+    const boundary=moons[ni], prev=moons[ni-1];
+    const day=Math.round((localDate(K)-localDate(prev.date))/86400000);
+    if(day<1)return null;
+    return {day,monthOrder:Number(boundary.month_order),month:monthName(boundary.month_order),year:Number(boundary.lunar_year)||null,isNewMoon:String(boundary.date)===K};
   }
-  return null;
-}
-
-function renderLunarCard(){
-  const box = document.getElementById('lunarList');
-  if (!box) return;
-  const y = Number(document.getElementById('year-selector')?.value || new Date().getFullYear());
-  const rows = (DB().events||[]).map(e=>{
-    const r = resolveLunarEvent(e.month, e.day, y);
-    return { ...e, resolved: r };
-  }).sort((a,b)=> (a.resolved?.date||'9999').localeCompare(b.resolved?.date||'9999'));
-
-  if (!rows.length){
-    box.innerHTML = '<div class="lunar-item"><b>🌙 চন্দ্রমাসের বিশেষ দিন</b><span>Admin Panel থেকে lunar event যোগ করুন।</span></div>';
-    return;
+  function colorFor(order){
+    return Number(order)%2===1 ? '#e53935' : '#388e3c';
   }
-  box.innerHTML = rows.map(x=>{
-    const r = x.resolved;
-    const dateText = r ? r.date : '—';
-    const lunarYear = r?.lunarYear ? `Lunar year: ${r.lunarYear}` : (r ? 'Lunar year: N/A' : 'New Moon data প্রয়োজন');
-    const bengali = r ? resolveBengali(pdate(r.date)) : null;
-    const bnText = bengali ? `${toBn(bengali.day)} ${bengali.month} ${toBn(bengali.year)}` : '';
-    const mObj = (DB().months||[]).find(m=>Number(m.order)===Number(x.month));
-    const monthName = mObj ? (mObj.olchiki_name || mObj.english_name) : `Month ${x.month}`;
-    return `<div class="lunar-item" ${r?`data-goto="${esc(r.date)}"`:''}>
-      <b>${esc(monthName)} ${esc(onum(x.day))}</b>
-      <span>${esc(x.title||'')}</span>
-      ${x.label?`<small>${esc(x.label)}</small>`:''}
-      ${x.description?`<small>${esc(x.description)}</small>`:''}
-      <span class="fixed-date">English: ${esc(dateText)}${bnText?`<br><small>বাংলা: ${esc(bnText)}</small>`:''}</span>
-      <div class="lunar-year-note">${esc(lunarYear)}</div>
-      ${x.image?`<img src="${esc(x.image)}" alt="${esc(x.title)}" loading="lazy">`:''}
-    </div>`;
-  }).join('');
+  function bengaliSafe(d){
+    const y=d.getFullYear();
+    // The existing Bengali mapping is authoritative for years already supplied in the page.
+    // Do not silently use the 2025 fallback for older years.
+    if(y>=2025 && typeof getBengaliDate==='function'){
+      try{return getBengaliDate(d)||null;}catch(e){}
+    }
+    return null;
+  }
 
-  box.querySelectorAll('[data-goto]').forEach(el=>{
-    el.addEventListener('click', ()=>{
-      const d = el.dataset.goto;
-      if (!d) return;
-      const dt = pdate(d);
-      const ys = document.getElementById('year-selector');
-      const ms = document.getElementById('month-selector');
-      if (ys) ys.value = dt.getFullYear();
-      if (ms) ms.value = dt.getMonth();
-      rebuildCalendar();
-      const cell = document.querySelector(`#calendar .date[data-date="${d}"]`);
-      if (cell){
-        cell.classList.add('kherwar-calendar-focus');
-        cell.scrollIntoView({behavior:'smooth', block:'center'});
-        setTimeout(()=>cell.classList.remove('kherwar-calendar-focus'), 2500);
+  function rebuildDateCells(){
+    const ys=document.getElementById('year-selector'), ms=document.getElementById('month-selector');
+    const cal=document.getElementById('calendar');
+    if(!ys||!ms||!cal)return;
+    const y=Number(ys.value), m=Number(ms.value);
+    const first=new Date(y,m,1).getDay();
+    const total=new Date(y,m+1,0).getDate();
+    const cells=[...cal.querySelectorAll('.date')];
+    cells.forEach((cell,idx)=>{
+      const day=idx-first+1;
+      if(day<1||day>total)return;
+      const d=new Date(y,m,day), ds=key(d);
+      cell.dataset.date=ds;
+      const ld=lunar(d);
+      const b=bengaliSafe(d);
+      const dc=cell.querySelector('.date-content');
+      if(!dc)return;
+
+      // Always show English + Santali. Bengali is added where the page has a valid mapping.
+      let html=`<div class="english-date ${d.getDay()===0?'sunday':''}">${day}</div>`;
+      if(ld){
+        html+=`<div class="santali-date" style="color:${colorFor(ld.monthOrder)}">${onum(ld.day)}</div>`;
+      }
+      if(b){
+        html+=`<div class="bengali-date" style="color:${esc(b.color||'#1976d2')}">${typeof toBengaliNumber==='function'?toBengaliNumber(b.day):b.day}</div>`;
+      }
+      dc.innerHTML=html;
+      dc.classList.remove('hidden');
+      dc.style.opacity='1'; dc.style.visibility='visible'; dc.style.transform='none';
+
+      // Month-start labels are rebuilt from the DB so leap-month transitions are visible.
+      cell.querySelectorAll('.santali-month-name').forEach(x=>x.remove());
+      cell.classList.remove('kherwar-month-red','kherwar-month-green','kherwar-newmoon');
+      if(ld){
+        cell.classList.add((Number(ld.monthOrder)%2===1)?'kherwar-month-red':'kherwar-month-green');
+        if(ld.isNewMoon)cell.classList.add('kherwar-newmoon');
+        if(ld.day===1 && ld.month){
+          const el=document.createElement('div');
+          el.className='santali-month-name';
+          el.textContent=ld.month;
+          el.style.color=colorFor(ld.monthOrder);
+          cell.appendChild(el);
+        }
       }
     });
-  });
-}
-
-/* ============================================================
-   ৮. মাস পরিবর্তনের সময় সবকিছু রিফ্রেশ
-   ============================================================ */
-function refreshAll(){
-  rebuildCalendar();
-  renderLunarCard();
-  sortEvents();
-}
-
-/* ============================================================
-   ৯. ইভেন্ট হ্যান্ডলার — বাটন/সিলেক্ট পরিবর্তনে
-   ============================================================ */
-document.addEventListener('change', e=>{
-  if (e.target?.id === 'year-selector' || e.target?.id === 'month-selector'){
-    setTimeout(refreshAll, 50);
   }
-}, true);
-document.addEventListener('click', e=>{
-  if (e.target.closest('.nav-btn')){
-    setTimeout(refreshAll, 100);
+
+  function ensureClock(){
+    const el=document.getElementById('time-display');
+    if(!el)return;
+    const update=()=>{
+      const now=new Date();
+      el.textContent=now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
+    };
+    update();
+    if(window.__kherwarClockTimer)clearInterval(window.__kherwarClockTimer);
+    window.__kherwarClockTimer=setInterval(update,1000);
   }
-}, true);
 
-/* ============================================================
-   ১০. startSync ইভেন্টে সব রিফ্রেশ
-   ============================================================ */
-const oldSync = window.sync;
-if (typeof oldSync === 'function'){
-  window.sync = async function(){
-    const r = await oldSync.apply(this, arguments);
-    setTimeout(refreshAll, 100);
-    return r;
-  };
-}
-
-/* ============================================================
-   ১১. টাইমার ক্লিনআপ — একাধিক interval বন্ধ
-   ============================================================ */
-if (window.__kherwarClockTimer) clearInterval(window.__kherwarClockTimer);
-if (window.__kherwarRefreshV3) clearInterval(window.__kherwarRefreshV3);
-
-/* ============================================================
-   ১২. প্রাথমিক লোড
-   ============================================================ */
-document.addEventListener('DOMContentLoaded', ()=>{
-  startClock();
-  setTimeout(refreshAll, 800);
-  setTimeout(refreshAll, 2000);
-});
-
-/* BroadcastChannel থেকে সিঙ্ক */
-if ('BroadcastChannel' in window){
-  const c = new BroadcastChannel('kherwar-calendar-updates');
-  c.onmessage = e=>{
-    if (e.data === 'data-updated'){
-      setTimeout(refreshAll, 200);
+  function eventDate(el){
+    const s=el?.querySelector?.('.event-date')?.textContent||'';
+    const m=s.match(/(\d{4})[-\/](\d{2})[-\/](\d{2})/);
+    if(m)return `${m[1]}-${m[2]}-${m[3]}`;
+    const ds=el?.dataset?.date||el?.dataset?.goto||'';
+    return /^\d{4}-\d{2}-\d{2}$/.test(ds)?ds:'9999-12-31';
+  }
+  function sortEventList(){
+    const track=document.getElementById('event-track');
+    if(!track)return;
+    // Unwrap our DB addon so admin events participate in the same sort as the existing events.
+    const addon=track.querySelector('.db-event-list-addon');
+    if(addon){
+      [...addon.children].forEach(ch=>track.appendChild(ch));
+      addon.remove();
     }
-  };
-}
+    const items=[...track.children];
+    items.sort((a,b)=>eventDate(a).localeCompare(eventDate(b)));
+    items.forEach(x=>track.appendChild(x));
+  }
 
-/* Global exposure */
-window.kherwarRefreshAll = refreshAll;
+  function runFix(){
+    rebuildDateCells();
+    ensureClock();
+    // V3 may append the DB event list after the existing list; sort everything afterwards.
+    setTimeout(()=>sortEventList(),20);
+  }
 
-console.log('✅ Kherwar Master Fix loaded');
+  const oldGen=window.generateCalendar;
+  if(typeof oldGen==='function' && !window.__kherwarV6Gen){
+    window.__kherwarV6Gen=true;
+    window.generateCalendar=function(){
+      const r=oldGen.apply(this,arguments);
+      setTimeout(runFix,25);
+      return r;
+    };
+  }
+  const oldSync=window.sync;
+  if(typeof oldSync==='function' && !window.__kherwarV6Sync){
+    window.__kherwarV6Sync=true;
+    window.sync=async function(){
+      const r=await oldSync.apply(this,arguments);
+      setTimeout(runFix,80);
+      return r;
+    };
+  }
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(runFix,400));
+  document.addEventListener('change',e=>{
+    if(e.target?.id==='year-selector'||e.target?.id==='month-selector')setTimeout(runFix,100);
+  },true);
+  window.KHERWAR_V6_READY=true;
 })();
 </script>
 
