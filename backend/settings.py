@@ -11,7 +11,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'change-this-in-production')
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # Railway-এর অটো ডোমেইন, আপনার কাস্টম ডোমেইন এবং লোকালহোস্ট
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '.railway.app', 'kherwarcalendar.co.in', 'www.kherwarcalendar.co.in'] 
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '.railway.app', 'kherwarcalendar.co.in'] 
 # 👆 'your-domain.com' এর জায়গায় আপনার আসল ডোমেইন বসান। Railway অটোমেটিক .railway.app ডোমেইন পেয়ে যাবে।
 
 INSTALLED_APPS = [
@@ -81,14 +81,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Railway-এর ডোমেইনের জন্য CSRF সেটআপ
 CSRF_TRUSTED_ORIGINS = [
-    'https://web-production-9ed61.up.railway.app',
+    'https://web-production-a2a89.up.railway.app',
     'https://kherwarcalendar.co.in',
     'https://www.kherwarcalendar.co.in',
 ]
 
-# লগইন এবং লগআউট সেটিংস
-LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/admin-panel/'   # লগইন সফল হলে অ্যাডমিন প্যানেলে যাবে
-LOGOUT_REDIRECT_URL = '/'
 
 
