@@ -9,9 +9,6 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 import csv
 
-def admin_panel(request):
-    return render(request, 'admin_panel.html')  # আপনার admin HTML
-
 def bootstrap(request):
     # আপনার bootstrap logic
     return JsonResponse({})
