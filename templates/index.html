@@ -6143,8 +6143,10 @@ function updateEventList(month, year) {
     // তারিখগুলি যোগ করুন
     for (let i = 1; i <= daysInMonth; i++) {
         const currentDate = new Date(year, month, i);
+        // Santali date comes ONLY from the manual 1900–2050 mapping.
         const santaliDate = getSantaliDate(currentDate, santaliMonthMap);
-        const bengaliDate = getBengaliDate(currentDate);
+        // Bengali is optional; it must never block Santali rendering.
+        const bengaliDate = (typeof getBengaliDate === 'function') ? getBengaliDate(currentDate) : null;
         const dateString = formatDate(currentDate); 
         const isSunday = currentDate.getDay() === 0;
 
@@ -6165,30 +6167,32 @@ function updateEventList(month, year) {
         // তারিখের কন্টেন্ট লুকানোর জন্য ক্লাস যোগ করুন
         const dateContentClass = events.length > 0 ? 'date-content hidden' : 'date-content';
         
-        // ক্যালেন্ডার টাইপ অনুযায়ী তারিখ প্রদর্শন
+        // ============================================================
+        // FIX: Santali date must NOT depend on Bengali date.
+        // 1900–2024 manual Santali mapping has to display even when
+        // Bengali data is unavailable.
+        // ============================================================
         let dateContent = '';
-        if (bengaliDate && santaliDate) {
-            if (currentCalendarType === 'bengali') {
-                dateContent = `
-                    <div class="bengali-date" style="color: ${bengaliDate.color};">${toBengaliNumber(bengaliDate.day)}</div>
-                    <div class="english-date ${isSunday ? 'sunday' : ''}">${i}</div>
-                    <div class="santali-date" style="color: ${santaliDate.color}">${toOlChikiNumber(santaliDate.day)}</div>
-                `;
-            } else if (currentCalendarType === 'santali') {
-                dateContent = `
-                    <div class="santali-date" style="color: ${santaliDate.color};">${toOlChikiNumber(santaliDate.day)}</div>
-                    <div class="english-date ${isSunday ? 'sunday' : ''}">${i}</div>
-                    <div class="bengali-date" style="color: ${bengaliDate.color}">${toBengaliNumber(bengaliDate.day)}</div>
-                `;
-            } else {
-                dateContent = `
-                    <div class="english-date ${isSunday ? 'sunday' : ''}">${i}</div>
-                    <div class="santali-date" style="color: ${santaliDate.color}">${toOlChikiNumber(santaliDate.day)}</div>
-                    <div class="bengali-date" style="color: ${bengaliDate.color}">${toBengaliNumber(bengaliDate.day)}</div>
-                `;
-            }
+
+        if (currentCalendarType === 'santali') {
+            dateContent = `
+                ${santaliDate ? `<div class="santali-date" style="color: ${santaliDate.color};">${toOlChikiNumber(santaliDate.day)}</div>` : ''}
+                <div class="english-date ${isSunday ? 'sunday' : ''}">${i}</div>
+                ${bengaliDate ? `<div class="bengali-date" style="color: ${bengaliDate.color};">${toBengaliNumber(bengaliDate.day)}</div>` : ''}
+            `;
+        } else if (currentCalendarType === 'bengali') {
+            dateContent = `
+                ${bengaliDate ? `<div class="bengali-date" style="color: ${bengaliDate.color};">${toBengaliNumber(bengaliDate.day)}</div>` : ''}
+                <div class="english-date ${isSunday ? 'sunday' : ''}">${i}</div>
+                ${santaliDate ? `<div class="santali-date" style="color: ${santaliDate.color};">${toOlChikiNumber(santaliDate.day)}</div>` : ''}
+            `;
         } else {
-            dateContent = `<div class="english-date ${isSunday ? 'sunday' : ''}">${i}</div>`;
+            // English/normal view: English + Santali always.
+            dateContent = `
+                <div class="english-date ${isSunday ? 'sunday' : ''}">${i}</div>
+                ${santaliDate ? `<div class="santali-date" style="color: ${santaliDate.color};">${toOlChikiNumber(santaliDate.day)}</div>` : ''}
+                ${bengaliDate ? `<div class="bengali-date" style="color: ${bengaliDate.color};">${toBengaliNumber(bengaliDate.day)}</div>` : ''}
+            `;
         }
         
         // ইমেজ ব্যাকগ্রাউন্ড যোগ করুন
