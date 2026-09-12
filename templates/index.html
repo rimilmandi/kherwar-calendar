@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <title>সাঁওতালি, বাংলা ও ইংরেজি ক্যালেন্ডার</title>
+    <title>Kherwar Luni-Solar Calendar</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&family=Noto+Sans+Ol+Chiki:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -2017,6 +2017,80 @@
             animation: none !important;
             animation-duration: 0s !important;
         }
+
+
+/* ============================================================
+   MOBILE FIX: <=380px
+   English -> Santali -> Bengali, strictly top-to-bottom.
+   Prevent date numbers from overlapping/wrapping into each other.
+   ============================================================ */
+@media (max-width: 380px) {
+    .calendar-grid {
+        gap: 2px !important;
+    }
+
+    .calendar-cell,
+    .day-cell,
+    .date-cell,
+    .calendar-day {
+        min-width: 0 !important;
+        width: 100% !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+    }
+
+    .calendar-cell .english-date,
+    .calendar-cell .santali-date,
+    .calendar-cell .bengali-date,
+    .day-cell .english-date,
+    .day-cell .santali-date,
+    .day-cell .bengali-date,
+    .date-cell .english-date,
+    .date-cell .santali-date,
+    .date-cell .bengali-date,
+    .calendar-day .english-date,
+    .calendar-day .santali-date,
+    .calendar-day .bengali-date {
+        display: block !important;
+        position: static !important;
+        float: none !important;
+        clear: both !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: 1.15 !important;
+        text-align: center !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: clip !important;
+        box-sizing: border-box !important;
+    }
+
+    .calendar-cell .english-date,
+    .day-cell .english-date,
+    .date-cell .english-date,
+    .calendar-day .english-date {
+        font-size: 14px !important;
+        margin-bottom: 2px !important;
+    }
+
+    .calendar-cell .santali-date,
+    .day-cell .santali-date,
+    .date-cell .santali-date,
+    .calendar-day .santali-date {
+        font-size: 12px !important;
+        margin-bottom: 2px !important;
+    }
+
+    .calendar-cell .bengali-date,
+    .day-cell .bengali-date,
+    .date-cell .bengali-date,
+    .calendar-day .bengali-date {
+        font-size: 11px !important;
+    }
+}
 
 </style>
 
@@ -7522,6 +7596,53 @@ if('BroadcastChannel' in window){
 }
 
 })();
+
+/* ============================================================
+   EVENT LIST FILTER
+   Lunar special days and solar-year special days must NOT appear
+   in the general Event List. They remain available for calendar
+   date-cell/special-day rendering.
+   ============================================================ */
+function isCalendarSpecialEvent(ev) {
+    if (!ev || typeof ev !== 'object') return false;
+
+    const kind = String(
+        ev.kind ?? ev.type ?? ev.event_type ?? ev.category ?? ev.source ?? ''
+    ).toLowerCase();
+
+    const monthOrder = Number(
+        ev.month_order ?? ev.monthOrder ?? ev.lunar_month_order ?? ev.lunarMonthOrder ?? 0
+    );
+
+    const lunarDay = Number(
+        ev.day ?? ev.lunar_day ?? ev.lunarDay ?? 0
+    );
+
+    const hasLunarIdentity =
+        Number.isFinite(monthOrder) && monthOrder > 0 &&
+        Number.isFinite(lunarDay) && lunarDay > 0;
+
+    const lunarWords =
+        kind.includes('lunar') ||
+        kind.includes('moon') ||
+        kind.includes('chandra') ||
+        kind.includes('চন্দ্র') ||
+        kind.includes('চান্দ্র');
+
+    const solarWords =
+        kind.includes('solar') ||
+        kind.includes('sun') ||
+        kind.includes('surya') ||
+        kind.includes('সৌর');
+
+    return lunarWords || solarWords || hasLunarIdentity;
+}
+
+function filterGeneralEventList(events) {
+    if (!Array.isArray(events)) return [];
+    return events.filter(ev => !isCalendarSpecialEvent(ev));
+}
+
 </script>
 </body>
 </html>
