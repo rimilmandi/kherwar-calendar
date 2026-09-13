@@ -52,7 +52,7 @@ def ensure_months():
 
 def month_json(m): return {'id':m.id,'order':m.order,'olchiki_name':m.olchiki_name,'english_name':m.english_name,'is_extra':m.is_extra}
 def hist_json(x): return {'id':x.id,'date':x.gregorian.isoformat(),'bDay':x.bengali_day,'bMonth':x.bengali_month,'bYear':x.bengali_year,'sDay':x.santali_day,'sMonth':x.santali_month,'sYear':x.santali_year,'note':x.note}
-def event_json(x): return {'id':x.id,'month':x.month_order,'day':x.day,'title':x.title,'description':x.description,'image':x.image,'label':x.label}
+def event_json(x): return {'id':x.id,'month':x.month_order,'day_from': x.day_from,'day_to': x.day_to,'title':x.title,'description':x.description,'image':x.image,'label':x.label}
 def solar_json(x): return {'id':x.id,'date':x.date.isoformat(),'title':x.title,'description':x.short_description,'details':x.details,'image':x.image}
 def ad_json(x): return {'id':x.id,'slot':x.slot,'business_name':x.business_name,'image':x.image,'target_url':x.target_url,'start_date':x.start_date.isoformat() if x.start_date else None,'end_date':x.end_date.isoformat() if x.end_date else None,'priority':x.priority}
 
@@ -182,7 +182,7 @@ def data_api(request, kind):
         obj.bengali_day=body.get('bDay') or None; obj.bengali_month=body.get('bMonth',''); obj.bengali_year=body.get('bYear') or None
         obj.santali_day=body.get('sDay') or None; obj.santali_month=body.get('sMonth',''); obj.santali_year=body.get('sYear') or None; obj.note=body.get('note','')
     elif kind=='event':
-        obj=obj or Model(); obj.month_order=int(body['month']); obj.day=int(body['day']); obj.title=body['title']; obj.description=body.get('description',''); obj.image=body.get('image',''); obj.label=body.get('label',''); obj.active=True
+        obj=obj or Model(); obj.month_order=int(body['month']); obj.day_from=int(body.get('day_from') or body.get('day', 1)); obj.day_to=int(body.get('day_to') or body.get('day', 1)); obj.title=body['title']; obj.description=body.get('description',''); obj.image=body.get('image',''); obj.label=body.get('label',''); obj.active=True
     elif kind=='solar':
         obj=obj or Model(); obj.date=body['date']; obj.title=body['title']; obj.short_description=body.get('description',''); obj.details=body.get('details',''); obj.image=body.get('image',''); obj.active=True
     elif kind=='ad':
@@ -206,7 +206,7 @@ def import_csv(request, kind):
             elif kind=='moon':
                 NewMoon.objects.update_or_create(date=r['date'],defaults={'lunar_year':r.get('lunar_year') or None,'month_order':r.get('month_order') or None,'note':r.get('note','')}); count+=1
             elif kind=='event':
-                LunarEvent.objects.create(month_order=int(r['month']),day=int(r['day']),title=r['title'],description=r.get('description',''),image=r.get('image',''),label=r.get('label',''),active=True); count+=1
+                LunarEvent.objects.create(month_order=int(r['month']),day_from=int(r.get('day_from') or r.get('day', 1)),day_to=int(r.get('day_to') or r.get('day', 1)),title=r['title'],description=r.get('description',''),image=r.get('image',''),label=r.get('label',''),active=True); count+=1
             else: return JsonResponse({'error':'Unsupported import type'},status=400)
     except (KeyError,ValueError) as e: return JsonResponse({'error':f'CSV error: {e}'},status=400)
     return JsonResponse({'ok':True,'count':count})
@@ -221,6 +221,6 @@ def export_csv(request, kind):
     elif kind=='moon':
         fields=['date','lunar_year','month_order','note']; rows=[[x.date,x.lunar_year,x.month_order,x.note] for x in NewMoon.objects.all()]
     elif kind=='event':
-        fields=['month','day','title','description','image','label']; rows=[[x.month_order,x.day,x.title,x.description,x.image,x.label] for x in LunarEvent.objects.all()]
+        fields=['month','day_from','day_to','title','description','image','label']; rows=[[x.month_order,x.day_from,x.day_to,x.title,x.description,x.image,x.label] for x in LunarEvent.objects.all()]
     else: return JsonResponse({'error':'Unsupported export type'},status=400)
     response=HttpResponse(content_type='text/csv; charset=utf-8'); response['Content-Disposition']=f'attachment; filename={kind}.csv'; w=csv.writer(response); w.writerow(fields); w.writerows(rows); return response

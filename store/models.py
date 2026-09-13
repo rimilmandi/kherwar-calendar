@@ -32,13 +32,14 @@ class HistoricalDate(models.Model):
 
 class LunarEvent(models.Model):
     month_order = models.PositiveSmallIntegerField()
-    day = models.PositiveSmallIntegerField()
+    day_from = models.PositiveSmallIntegerField(default=1)  # নতুন
+    day_to = models.PositiveSmallIntegerField(default=1)    # নতুন
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    image = models.URLField(blank=True)
+    image = models.CharField(max_length=500, blank=True)
     label = models.CharField(max_length=80, blank=True)
     active = models.BooleanField(default=True)
-    class Meta: ordering = ['month_order', 'day', 'title']
+    class Meta: ordering = ['month_order', 'day_from', 'title']
     def __str__(self): return self.title
 
 class SolarEvent(models.Model):
@@ -46,7 +47,7 @@ class SolarEvent(models.Model):
     title = models.CharField(max_length=200)
     short_description = models.CharField(max_length=300, blank=True)
     details = models.TextField(blank=True)
-    image = models.URLField(blank=True)
+    image = models.CharField(max_length=500, blank=True)
     active = models.BooleanField(default=True)
     class Meta: ordering = ['date']
     def __str__(self): return f'{self.date} - {self.title}'
@@ -55,7 +56,7 @@ class Advertisement(models.Model):
     SLOT_CHOICES = [('left_top','Left Top'),('right_top','Right Top'),('right_bottom','Right Bottom'),('featured','Featured')]
     slot = models.CharField(max_length=30, choices=SLOT_CHOICES)
     business_name = models.CharField(max_length=160)
-    image = models.URLField(blank=True)
+    image = models.CharField(max_length=500, blank=True)
     target_url = models.URLField(blank=True)
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
