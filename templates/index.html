@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <title>Kherwar Luni-Solar Calendar</title>
+    <title>সাঁওতালি, বাংলা ও ইংরেজি ক্যালেন্ডার</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&family=Noto+Sans+Ol+Chiki:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -2090,6 +2090,75 @@
     .calendar-day .bengali-date {
         font-size: 11px !important;
     }
+}
+
+
+/* FINAL MOBILE DATE LAYOUT FIX — Poco C55 and narrow screens */
+@media (max-width: 380px) {
+  .calendar-grid,
+  .calendar {
+    gap: 2px !important;
+  }
+
+  .calendar-cell,
+  .day-cell,
+  .date-cell,
+  .calendar-day {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    padding: 2px !important;
+  }
+
+  .calendar-cell .english-date,
+  .calendar-cell .santali-date,
+  .calendar-cell .bengali-date,
+  .day-cell .english-date,
+  .day-cell .santali-date,
+  .day-cell .bengali-date,
+  .date-cell .english-date,
+  .date-cell .santali-date,
+  .date-cell .bengali-date,
+  .calendar-day .english-date,
+  .calendar-day .santali-date,
+  .calendar-day .bengali-date {
+    display: block !important;
+    position: static !important;
+    float: none !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1.15 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  .calendar-cell .english-date,
+  .day-cell .english-date,
+  .date-cell .english-date,
+  .calendar-day .english-date {
+    font-size: 13px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .calendar-cell .santali-date,
+  .day-cell .santali-date,
+  .date-cell .santali-date,
+  .calendar-day .santali-date {
+    font-size: 11px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .calendar-cell .bengali-date,
+  .day-cell .bengali-date,
+  .date-cell .bengali-date,
+  .calendar-day .bengali-date {
+    font-size: 10px !important;
+  }
 }
 
 </style>
@@ -7087,7 +7156,7 @@ function renderAds() {
     window.KHERWAR_DB.ads.forEach(function(a) {
         const slot = String(a.slot || "").trim();
         const business = a.business_name || "Advertisement";
-        const image = a.image || "";
+        const image = normalizeAdminImageUrl(normalizeAdminImageUrl(a.image || ""));
         const target = a.target_url || "";
 
         // ===== FEATURED SLOT =====
@@ -7141,7 +7210,7 @@ function renderCalendarEvents() {
     
     // আপনি এখানে কাস্টম ইভেন্ট রেন্ডার করার কোড যোগ করতে পারেন
     // উদাহরণ: fixedEvents অবজেক্টে নতুন ইভেন্ট যোগ করা
-    window.KHERWAR_DB.events.forEach(function(ev) {
+    getGeneralEventList(window.KHERWAR_DB.events).forEach(function(ev) {
         if (ev.date && ev.title) {
             fixedEvents[ev.date] = {
                 title: ev.title,
@@ -7192,19 +7261,46 @@ window.sync = async function() {
         
         const data = await r.json();
         
-        // ডেটা পরিবর্তন হয়েছে কিনা চেক করুন
-        const newHash = JSON.stringify(data.ads || []) + JSON.stringify(data.events || []);
-        const oldHash = JSON.stringify(window.KHERWAR_DB.ads || []) + JSON.stringify(window.KHERWAR_DB.events || []);
-        
-        window.KHERWAR_DB = data;
+        // ========================================================
+        // PUBLIC CALENDAR <- ADMIN PANEL DATABASE
+        // সব bootstrap data গ্রহণ করুন; শুধু ads/events নয়।
+        // Manual Santali mapping আলাদা source হিসেবে অক্ষুণ্ণ থাকবে।
+        // ========================================================
+        window.KHERWAR_DB = {
+            months: Array.isArray(data.months) ? data.months : [],
+            newMoons: Array.isArray(data.newMoons) ? data.newMoons : [],
+            history: Array.isArray(data.history) ? data.history : [],
+            events: Array.isArray(data.events) ? data.events : [],
+            solarEvents: Array.isArray(data.solarEvents) ? data.solarEvents : [],
+            ads: Array.isArray(data.ads) ? data.ads : [],
+            settings: data.settings || {}
+        };
         lastUpdateTime = new Date();
-        
-        // শুধুমাত্র পরিবর্তন হলে রেন্ডার করুন
-        if (newHash !== oldHash) {
-            console.log('🔄 Data changed! Updating...');
-            renderAds();
-            renderCalendarEvents();
-            renderSolarEvents();
+
+        console.log('✅ Admin DB loaded:', {
+            months: window.KHERWAR_DB.months.length,
+            history: window.KHERWAR_DB.history.length,
+            events: window.KHERWAR_DB.events.length,
+            solarEvents: window.KHERWAR_DB.solarEvents.length,
+            ads: window.KHERWAR_DB.ads.length,
+            settings: Object.keys(window.KHERWAR_DB.settings).length
+        });
+
+        // প্রতিবার sync-এর পর সব DB-driven অংশ refresh করুন।
+        renderAds();
+        renderCalendarEvents();
+        renderSolarEvents();
+
+        // Admin UI Settings -> public page
+        const st = window.KHERWAR_DB.settings || {};
+        if (st.primary) document.documentElement.style.setProperty('--primary', st.primary);
+        if (st.secondary) document.documentElement.style.setProperty('--secondary', st.secondary);
+        if (st.gold) document.documentElement.style.setProperty('--gold', st.gold);
+        if (st.title) {
+            document.querySelectorAll('[data-admin-title]').forEach(el => el.textContent = st.title);
+        }
+        if (st.subtitle) {
+            document.querySelectorAll('[data-admin-subtitle]').forEach(el => el.textContent = st.subtitle);
         }
         
     } catch(e) {
@@ -7538,8 +7634,15 @@ function renderDbEventList(){
   document.querySelectorAll('.db-event-list-addon').forEach(x=>x.remove());
   const {y}=YM();
   const rows=[];
-  (DB().events||[]).forEach(e=>{const r=resolveLunarEvent(e.month,e.day,y);if(r)rows.push({e,date:r.date,lunar:true});});
-  (DB().solarEvents||[]).filter(e=>String(e.date||'').startsWith(String(y)+'-')).forEach(e=>rows.push({e,date:e.date,lunar:false}));
+
+  // General Event List-এ শুধুমাত্র সাধারণ LunarEvent নয়—
+  // admin panel-এর event data দেখাবে; solar special days এখানে নয়।
+  const sourceEvents = filterGeneralEventList(DB().events || []);
+  sourceEvents.forEach(e=>{
+    const r=resolveLunarEvent(e.month,e.day,y);
+    if(r)rows.push({e,date:r.date,lunar:true});
+  });
+
   rows.sort((a,b)=>a.date.localeCompare(b.date));
   if(!rows.length)return;
   const w=document.createElement('div');w.className='db-event-list-addon';
@@ -7640,7 +7743,61 @@ function isCalendarSpecialEvent(ev) {
 
 function filterGeneralEventList(events) {
     if (!Array.isArray(events)) return [];
-    return events.filter(ev => !isCalendarSpecialEvent(ev));
+    return events.filter(ev => !isCalendarS
+function normalizeAdminImageUrl(value) {
+  if (!value) return "";
+  let u = String(value).trim();
+  if (!u) return "";
+
+  // Already absolute/data/blob URL.
+  if (/^(https?:|data:|blob:)/i.test(u)) return u;
+
+  // Django ImageField may return /media/... or media/...
+  if (u.startsWith("/")) return u;
+  if (u.startsWith("media/")) return "/" + u;
+
+  // Bare uploaded filename/path: Django MEDIA_URL.
+  return "/media/" + u.replace(/^\/+/, "");
+}
+
+function refreshAdminImageElements() {
+  document.querySelectorAll("[data-admin-image]").forEach(function(img) {
+    const raw = img.getAttribute("data-admin-image") || "";
+    const url = normalizeAdminImageUrl(raw);
+    if (url) {
+      img.src = url;
+      img.onerror = function() {
+        console.warn("Admin image could not be loaded:", url);
+      };
+    }
+  });
+}
+
+pecialEvent(ev));
+}
+
+
+/* FINAL EVENT-LIST RULE:
+   Lunar special days and Solar-year special days are NOT general events.
+   They may still be used by calendar/special-day rendering. */
+function isSpecialCalendarEvent(ev) {
+  if (!ev) return false;
+
+  const month = Number(ev.month ?? ev.month_order ?? ev.monthOrder ?? 0);
+  const day = Number(ev.day ?? ev.lunar_day ?? ev.lunarDay ?? 0);
+
+  // LunarEvent records have month + lunar day.
+  if (month > 0 && day > 0) return true;
+
+  // SolarEvent records have a Gregorian date.
+  if (ev.solarEvent === true || ev.type === "solar" || ev.kind === "solar") return true;
+
+  return false;
+}
+
+function getGeneralEventList(events) {
+  return (Array.isArray(events) ? events : [])
+    .filter(ev => !isSpecialCalendarEvent(ev));
 }
 
 </script>
