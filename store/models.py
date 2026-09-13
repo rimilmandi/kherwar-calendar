@@ -32,21 +32,14 @@ class HistoricalDate(models.Model):
 
 class LunarEvent(models.Model):
     month_order = models.PositiveSmallIntegerField()
-
-    day_from = models.PositiveSmallIntegerField()
-    day_to = models.PositiveSmallIntegerField()
-
+    day = models.PositiveSmallIntegerField()
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     image = models.URLField(blank=True)
     label = models.CharField(max_length=80, blank=True)
     active = models.BooleanField(default=True)
-
-    class Meta:
-        ordering = ['month_order', 'day_from', 'title']
-
-    def __str__(self):
-        return self.title
+    class Meta: ordering = ['month_order', 'day', 'title']
+    def __str__(self): return self.title
 
 class SolarEvent(models.Model):
     date = models.DateField()
