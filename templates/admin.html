@@ -4,7 +4,7 @@
 <section id="dashboard" class="panel active"><div class="card"><h2>Database Dashboard</h2><div class="kpi"><div class="k"><b id="kh">0</b><span>Historical</span></div><div class="k"><b id="km">0</b><span>New Moon</span></div><div class="k"><b id="ke">0</b><span>Lunar Events</span></div><div class="k"><b id="ks">0</b><span>Solar Events</span></div><div class="k"><b id="ka">0</b><span>Ads</span></div></div><div class="actions"><button class="btn primary" onclick="loadDB()">↻ Sync Database</button><a class="btn secondary" href="/django-admin/">Django Admin</a><a class="btn gold" href="/">Open Calendar</a></div></div><div class="card"><h3>Database workflow</h3><p style="font-size:12px;line-height:1.7;color:var(--muted)">New Moon → Month order → পরের দিন থেকে Lunar Day 1 → Historical override (1900–2024) → Lunar/Solar Event → Calendar UI. 13th month হলে সেই বছরের New Moon entry-তে month order = 6 (বা আপনার নির্ধারিত ক্রম) দিন।</p></div></section>
 <section id="months" class="panel"><div class="card"><h2>🌙 Santali 12/13 Months</h2><div class="table"><table><thead><tr><th>#</th><th>Ol Chiki</th><th>English</th><th>Extra</th><th></th></tr></thead><tbody id="monthsRows"></tbody></table></div><div class="actions"><button class="btn primary" onclick="addMonth()">+ Month</button></div><h3>New Moon</h3><div class="grid3"><div><label>Gregorian date</label><input id="moonDate" type="date"></div><div><label>Santali year</label><input id="moonYear" type="number"></div><div><label>New moon-এর পরের মাসের order</label><input id="moonOrder" type="number" min="1" max="13"></div></div><label>Note</label><input id="moonNote"><button class="btn primary" style="margin-top:10px" onclick="saveMoon()">Save New Moon</button><div class="hint">📌 নিয়ম: New Moon-এর দিনটি আগের/বর্তমান চন্দ্রমাসের শেষ দিন। পরের Gregorian দিন থেকে ওই New Moon entry-র month order-এর মাসের ১ তারিখ শুরু হবে।</div><div class="actions"><button class="btn secondary" onclick="exportCSV('moon')">Export Moon CSV</button><button class="btn secondary" onclick="document.getElementById('moonCSV').click()">Import Moon CSV</button><input id="moonCSV" type="file" accept=".csv" hidden></div><div class="table"><table><thead><tr><th>Date</th><th>Year</th><th>Month order</th><th></th></tr></thead><tbody id="moonRows"></tbody></table></div></div></section>
 <section id="history" class="panel"><div class="card"><h2>📜 Historical Date Database — 1900–2024</h2><div class="grid3"><div><label>Gregorian *</label><input id="hDate" type="date" min="1900-01-01" max="2024-12-31"></div><div><label>বাংলা দিন</label><input id="hbD" type="number"></div><div><label>বাংলা মাস</label><input id="hbM"></div><div><label>বাংলা বছর</label><input id="hbY" type="number"></div><div><label>সাঁওতালি দিন</label><input id="hsD" type="number"></div><div><label>সাঁওতালি মাস</label><input id="hsM"></div><div><label>সাঁওতালি বছর</label><input id="hsY" type="number"></div><div><label>Source / Note</label><input id="hn"></div></div><button class="btn primary" style="margin-top:10px" onclick="saveHistory()">Save Historical Date</button><div class="actions"><button class="btn secondary" onclick="exportCSV('history')">Export Historical CSV</button><button class="btn secondary" onclick="document.getElementById('historyCSV').click()">Import Historical CSV</button><input id="historyCSV" type="file" accept=".csv" hidden></div><div class="table"><table><thead><tr><th>Gregorian</th><th>বাংলা</th><th>সাঁওতালি</th><th>Source</th><th></th></tr></thead><tbody id="historyRows"></tbody></table></div></div></section>
-<section id="events" class="panel"><div class="card"><h2>🎉 Lunar Event</h2><div class="grid3"><div><label>Month order</label><input id="em" type="number" min="1" max="13"></div><div><label>Lunar day</label><input id="ed" type="number" min="1" max="35"></div><div><label>Title *</label><input id="et"></div></div><div class="grid"><div><label>Details</label><textarea id="edesc"></textarea></div><div><label>Image URL</label><input id="eimg" placeholder="/media/... বা https://..."><input id="eimgFile" type="file" accept="image/*" hidden><button type="button" class="btn secondary" onclick="$('eimgFile').click()">📁 Local Image</button><div class="hint">📐 Date-cell/Lunar image: 800×600 px (4:3) recommended</div><label>Label</label><input id="elabel"></div></div><button id="eventSaveBtn" class="btn primary" style="margin-top:10px" onclick="saveEvent()">Save Event</button> <button id="eventCancelBtn" class="btn secondary" style="margin-top:10px;display:none" onclick="cancelEventEdit()">Cancel Edit</button><div class="actions"><button class="btn secondary" onclick="exportCSV('event')">Export Events CSV</button><button class="btn secondary" onclick="document.getElementById('eventCSV').click()">Import Events CSV</button><input id="eventCSV" type="file" accept=".csv" hidden></div><div class="table"><table><thead><tr><th>Month</th><th>Day</th><th>Title</th><th>Details</th><th>Image</th><th>Label</th><th>Action</th></tr></thead><tbody id="eventRows"></tbody></table></div></div></section>
+<section id="events" class="panel"><div class="card"><h2>🎉 Lunar Event</h2><div class="grid3"><div><label>Month order</label><input id="em" type="number" min="1" max="13"></div><div><label>Lunar Day From</label><input id="edFrom" type="number" min="1" max="35" placeholder="From"></div><div><label>Lunar Day To</label><input id="edTo" type="number" min="1" max="35" placeholder="To"></div><div><label>Title *</label><input id="et"></div></div><div class="grid"><div><label>Details</label><textarea id="edesc"></textarea></div><div><label>Image URL</label><input id="eimg" placeholder="/media/... বা https://..."><input id="eimgFile" type="file" accept="image/*" hidden><button type="button" class="btn secondary" onclick="$('eimgFile').click()">📁 Local Image</button><div class="hint">📐 Date-cell/Lunar image: 800×600 px (4:3) recommended</div><label>Label</label><input id="elabel"></div></div><button id="eventSaveBtn" class="btn primary" style="margin-top:10px" onclick="saveEvent()">Save Event</button> <button id="eventCancelBtn" class="btn secondary" style="margin-top:10px;display:none" onclick="cancelEventEdit()">Cancel Edit</button><div class="actions"><button class="btn secondary" onclick="exportCSV('event')">Export Events CSV</button><button class="btn secondary" onclick="document.getElementById('eventCSV').click()">Import Events CSV</button><input id="eventCSV" type="file" accept=".csv" hidden></div><div class="table"><table><thead><tr><th>Month</th><th>Day</th><th>Title</th><th>Details</th><th>Image</th><th>Label</th><th>Action</th></tr></thead><tbody id="eventRows"></tbody></table></div></div></section>
 <section id="solar" class="panel"><div class="card"><h2>☀ Solar Year Special Days</h2><div class="grid"><div><label>Date</label><input id="sd" type="date"></div><div><label>Title</label><input id="st"></div><div><label>Short description</label><input id="ss"></div><div><label>Image URL</label><input id="si" placeholder="/media/... বা https://..."><input id="siFile" type="file" accept="image/*" hidden><button type="button" class="btn secondary" onclick="$('siFile').click()">📁 Local Image</button><div class="hint">📐 Solar card image: 800×450 px (16:9) recommended</div></div></div><label>Detailed information</label><textarea id="sdet"></textarea><button id="solarSaveBtn" class="btn primary" style="margin-top:10px" onclick="saveSolar()">Save Solar Event</button> <button id="solarCancelBtn" class="btn secondary" style="margin-top:10px;display:none" onclick="cancelSolarEdit()">Cancel Edit</button><div class="table"><table><thead><tr><th>Date</th><th>Title</th><th>Short Description</th><th>Details</th><th>Image</th><th>Action</th></tr></thead><tbody id="solarRows"></tbody></table></div></div></section>
 <section id="ads" class="panel"><div class="card"><h2>📢 Advertisement</h2><p style="color:#666;margin-top:-6px">লোকাল Drive/PC থেকে ছবি বেছে নিলে server-এর <b>Image URL</b> নিজে তৈরি হবে। <b>Target URL</b>-এ ক্লিক করলে যে website খুলবে তার ঠিকানা দিন।</p><div class="grid3"><div><label>Slot</label><select id="as"><option value="left_top">Left Top</option><option value="right_top">Right Top</option><option value="right_bottom">Right Bottom</option><option value="featured">Featured</option></select></div><div><label>Business</label><input id="ab"></div><div><label>Priority</label><input id="ap" type="number" value="0"></div><div><label>Image URL</label><input id="ai" placeholder="Upload করলে URL এখানে বসবে"><input id="aiFile" type="file" accept="image/*" hidden><button type="button" class="btn secondary" onclick="$('aiFile').click()">📁 Local Image</button></div><div><label>Target URL</label><input id="au" placeholder="https://business.example.com"></div><div><label>Start</label><input id="ast" type="date"></div><div><label>End</label><input id="aen" type="date"></div></div><button class="btn primary" style="margin-top:10px" onclick="saveAd()">Save Advertisement</button><div class="table"><table><thead><tr><th>Slot</th><th>Business</th><th>Period</th><th></th></tr></thead><tbody id="adRows"></tbody></table></div></div></section>
 <section id="settings" class="panel"><div class="card"><h2>🎨 UI Settings</h2><div class="grid3"><div><label>Primary</label><input id="up" type="color"></div><div><label>Secondary</label><input id="up2" type="color"></div><div><label>Gold</label><input id="ug" type="color"></div></div><div class="grid"><div><label>Title</label><input id="ut"></div><div><label>Subtitle</label><input id="us"></div></div><button class="btn primary" style="margin-top:10px" onclick="saveSettings()">Save UI Settings</button></div></section>
@@ -126,12 +126,21 @@ function renderHistory(){
 }
 
 function renderEvents(){
-    $('eventRows').innerHTML=D.events.map(x=>`<tr>
-        <td>${x.month}</td><td>${x.day}</td><td>${esc(x.title)}</td>
+    $('eventRows').innerHTML = D.events.map(x => `<tr>
+        <td>${x.month}</td>
+        <td>${x.day_from} → ${x.day_to}</td>
+        <td>${esc(x.title)}</td>
         <td>${esc(x.description)}</td>
-        <td>${x.image ? '<img src="'+esc(x.image)+'" style="width:60px;height:40px;object-fit:cover;border-radius:6px">' : '—'}</td>
+        <td>
+            ${x.image
+                ? '<img src="'+esc(x.image)+'" style="width:60px;height:40px;object-fit:cover;border-radius:6px">'
+                : '—'}
+        </td>
         <td>${esc(x.label)}</td>
-        <td><button class="btn secondary" onclick="editEvent(${x.id})">Edit</button> <button class="btn danger" onclick="del('event',${x.id})">Delete</button></td>
+        <td>
+            <button class="btn secondary" onclick="editEvent(${x.id})">Edit</button>
+            <button class="btn danger" onclick="del('event',${x.id})">Delete</button>
+        </td>
     </tr>`).join('')
 }
 
@@ -216,20 +225,75 @@ let editingSolarId=null;
 
 async function saveEvent(){
  try{
-  const payload={month:Number($('em').value),day:Number($('ed').value),title:$('et').value,description:$('edesc').value,image:$('eimg').value,label:$('elabel').value};
-  if(!payload.title) return toast('Title required');
-  if(editingEventId) payload.id=editingEventId;
-  await req('event', editingEventId?'PUT':'POST', payload);
-  editingEventId=null; clearEventForm(); await loadDB(); broadcastUpdate(); toast('✅ Event saved!');
- }catch(e){toast(e.message)}
+   const from = Number($('edFrom').value);
+   const to = Number($('edTo').value);
+
+   const payload = {
+     month: Number($('em').value),
+     day_from: from,
+     day_to: to,
+     title: $('et').value,
+     description: $('edesc').value,
+     image: $('eimg').value,
+     label: $('elabel').value
+   };
+
+   if(!payload.title) return toast('Title required');
+
+   if(!from || !to)
+       return toast('Lunar Day From এবং To দিন');
+
+   if(from > to)
+       return toast('Lunar Day From, To-এর চেয়ে বড় হতে পারবে না');
+
+   if(editingEventId) payload.id = editingEventId;
+
+   await req('event', editingEventId ? 'PUT' : 'POST', payload);
+
+   editingEventId = null;
+   clearEventForm();
+
+   await loadDB();
+   broadcastUpdate();
+
+   toast('✅ Event saved!');
+ }catch(e){
+   toast(e.message);
+ }
 }
 
 function editEvent(id){
- const x=D.events.find(v=>Number(v.id)===Number(id)); if(!x)return;
- editingEventId=x.id; $('em').value=x.month; $('ed').value=x.day; $('et').value=x.title||''; $('edesc').value=x.description||''; $('eimg').value=x.image||''; $('elabel').value=x.label||'';
- $('eventSaveBtn').textContent='Update Event'; $('eventCancelBtn').style.display='inline-block'; window.scrollTo({top:0,behavior:'smooth'});
+  const x = D.events.find(v => Number(v.id) === Number(id));
+  if(!x) return;
+
+  editingEventId = x.id;
+
+  $('em').value = x.month || '';
+  $('edFrom').value = x.day_from || x.day || '';
+  $('edTo').value = x.day_to || x.day || '';
+  $('et').value = x.title || '';
+  $('edesc').value = x.description || '';
+  $('eimg').value = x.image || '';
+  $('elabel').value = x.label || '';
+
+  $('eventSaveBtn').textContent = 'Update Event';
+  $('eventCancelBtn').style.display = 'inline-block';
+
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  });
 }
-function clearEventForm(){['em','ed','et','edesc','eimg','elabel'].forEach(id=>{if($(id))$(id).value=''}); $('eventSaveBtn').textContent='Save Event'; $('eventCancelBtn').style.display='none';}
+
+function clearEventForm(){
+  ['em','edFrom','edTo','et','edesc','eimg','elabel'].forEach(id=>{
+    if($(id)) $(id).value='';
+  });
+
+  $('eventSaveBtn').textContent='Save Event';
+  $('eventCancelBtn').style.display='none';
+}
+
 function cancelEventEdit(){editingEventId=null;clearEventForm()}
 
 async function saveSolar(){
