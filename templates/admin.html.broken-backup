@@ -388,7 +388,7 @@ function render(){
   if(ms){
     ms.innerHTML = D.months
       .sort((a,b)=>a.order-b.order)
-      .map(m => `<option value="${esc(m.olchiki_name)}" data-order="${m.order}">${m.order}. ${esc(m.olchiki_name)} — ${esc(m.english_name)}</option>`)
+      .map(m => `<option value="${m.order}">${m.order}. ${esc(m.olchiki_name)} — ${esc(m.english_name)}</option>`)
       .join('');
   }
   toggleDayInput();
@@ -495,18 +495,14 @@ function toggleDayInput(){
 
 async function saveEvent(){
   try{
-    const sel = $('em').selectedOptions[0];
-    const month_name = sel ? sel.value : '';
-    const month_order = sel ? Number(sel.dataset.order) : null;
     await req('event','POST',{
-      month: month_order,
-      month_name: month_name,
-      day: Number($('ed').value),
-      title: $('et').value,
-      description: $('edesc').value,
-      image: $('eimg').value,
-      label: $('elabel').value,
-      event_type: $('ed_type').value
+      month:Number($('em').value),
+      day:Number($('ed').value),
+      title:$('et').value,
+      description:$('edesc').value,
+      image:$('eimg').value,
+      label:$('elabel').value,
+      event_type:$('ed_type').value
     });
     await loadDB();
     toast('✅ Event saved');
@@ -517,16 +513,7 @@ function editEvent(id){
   const x = D.events.find(v=>Number(v.id)===Number(id));
   if(!x) return;
   editingEventId = x.id;
-
-  // ✅ সাঁওতালি নাম দিয়ে dropdown সিলেক্ট
-  const sel = $('em');
-  if(x.month_name){
-    sel.value = x.month_name;
-  } else if(x.month){
-    const opt = Array.from(sel.options).find(o => Number(o.dataset.order) === Number(x.month));
-    if(opt) sel.value = opt.value;
-  }
-
+  $('em').value = x.month;
   $('ed').value = x.day;
   $('et').value = x.title || '';
   $('edesc').value = x.description || '';
@@ -535,32 +522,21 @@ function editEvent(id){
   if($('ed_type')) $('ed_type').value = x.event_type || 'lunar_day';
   toggleDayInput();
   if(typeof previewImg === 'function') previewImg('eimg','eimgPreview');
-
-  // ✅ Save বাটন লুকাই, Update ও Cancel দেখাই
-  $('eventSaveBtn').style.display = 'none';
-  $('eventUpdateBtn').style.display = 'inline-block';
-  $('eventCancelBtn').style.display = 'inline-block';
-
-  document.querySelector('#events .card').scrollIntoView({behavior:'smooth'});
   toast('✏️ এডিট মোডে — Update চাপুন');
 }
 
 async function updateEvent(){
   if(!editingEventId) return toast('⚠️ আগে Edit বাটনে ক্লিক করুন');
   try{
-    const sel = $('em').selectedOptions[0];
-    const month_name = sel ? sel.value : '';
-    const month_order = sel ? Number(sel.dataset.order) : null;
     await req('event','PUT',{
       id: editingEventId,
-      month: month_order,
-      month_name: month_name,
-      day: Number($('ed').value),
-      title: $('et').value,
-      description: $('edesc').value,
-      image: $('eimg').value,
-      label: $('elabel').value,
-      event_type: $('ed_type').value
+      month:Number($('em').value),
+      day:Number($('ed').value),
+      title:$('et').value,
+      description:$('edesc').value,
+      image:$('eimg').value,
+      label:$('elabel').value,
+      event_type:$('ed_type').value
     });
     editingEventId = null;
     resetEventForm();
@@ -584,7 +560,7 @@ function cancelEventEdit(){
 
 function renderEvents(){
   $('eventRows').innerHTML = D.events.map(x=>`<tr>
-    <td>${esc(x.month_name || '')} ${x.month ? '<small style="color:#888">('+x.month+')</small>' : ''}</td>
+    <td>${x.month}</td>
     <td>${x.day} ${x.event_type === 'full_moon' ? '🌕' : x.event_type === 'new_moon' ? '🌑' : ''}</td>
     <td>${esc(x.title)}</td>
     <td>${x.image ? '<img src="'+esc(x.image)+'" style="width:50px;height:40px;object-fit:cover;border-radius:6px">' : '—'}</td>

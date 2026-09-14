@@ -7416,36 +7416,26 @@ function lunarForDate(date){ return manualSantaliForDate(date); }
 function LunarFromDBSafe(date){ return manualSantaliForDate(date); }
 
 /* Resolve a fixed Santali month/day using ONLY the manual map. */
-function resolveLunarEvent(monthNameOrOrder, day, gregorianYear){
-  // monthNameOrOrder: "ᱢᱟᱜᱽ" অথবা 1
-  day = Number(day);
-  gregorianYear = Number(gregorianYear);
-  if(!monthNameOrOrder || !day || !gregorianYear) return null;
-  
-  const map = getSantaliMonthMap(gregorianYear);
-  if(!map || !map.length) return null;
-  
-  // 🎯 সাঁওতালি নাম দিয়ে খুঁজি (order নয়)
-  const candidates = map.filter(m => {
-    if(typeof monthNameOrOrder === 'string' && monthNameOrOrder.trim() !== ''){
-      return m.month === monthNameOrOrder;
-    }
-    // fallback: সংখ্যা হলে order দিয়ে
-    return Number(m.order) === Number(monthNameOrOrder);
-  });
-  
+function resolveLunarEvent(order,day,gregorianYear){
+  order=Number(order); day=Number(day); gregorianYear=Number(gregorianYear);
+  if(!order || !day || !gregorianYear) return null;
+
+  const map=getSantaliMonthMap(gregorianYear);
+  const candidates=map.filter(m=>Number(m.order)===order);
+
   for(const m of candidates){
-    const target = new Date(m.startDate);
+    const target=new Date(m.startDate);
     target.setHours(12,0,0,0);
-    target.setDate(target.getDate() + day - 1);
-    
-    if(target >= m.startDate && target <= m.endDate){
+    target.setDate(target.getDate()+day-1);
+
+    if(target>=m.startDate && target<=m.endDate){
       return {
-        date: dateKey(target),
-        day: day,
-        month: m.month,
-        year: m.year,
-        source: 'name-based'
+        date:dateKey(target),
+        day:day,
+        month:m.month,
+        monthOrder:m.order,
+        year:m.year,
+        source:'manual'
       };
     }
   }
@@ -7501,12 +7491,10 @@ function focusGregorianDate(ds){
 window.kherwarFocusGregorianDate=focusGregorianDate;
 
 function lunarEventsForCurrentYear(){
-  const y = YM().y;
-  return (DB().events||[]).map(e => {
-    // 🎯 month_name আগে, না থাকলে month (সংখ্যা) fallback
-    const key = e.month_name || e.month;
-    const r = resolveLunarEvent(key, e.day, y);
-    return {...e, resolved: r};
+  const y=YM().y;
+  return (DB().events||[]).map(e=>{
+    const r=resolveLunarEvent(e.month,e.day,y);
+    return {...e,resolved:r};
   });
 }
 
@@ -7576,15 +7564,9 @@ window.renderFixedSpecialCards=function(){
 
 /* Calendar date-cell event source: New Moon DB -> fixed lunar events + solar events. */
 function lunarEventsForDate(ds){
-  const ld = lunarForDate(parseDate(ds));
-  if(!ld || !ld.month) return [];
-  
-  // 🎯 সাঁওতালি মাসের নাম দিয়ে match
-  return (DB().events||[]).filter(e => {
-    const nameMatch = e.month_name && e.month_name === ld.month;
-    const orderMatch = !e.month_name && Number(e.month) === Number(ld.monthOrder);
-    return (nameMatch || orderMatch) && Number(e.day) === Number(ld.day);
-  });
+  const ld=lunarForDate(parseDate(ds));
+  if(!ld||!ld.monthOrder)return [];
+  return (DB().events||[]).filter(e=>Number(e.month)===Number(ld.monthOrder)&&Number(e.day)===Number(ld.day));
 }
 
 const oldGet=window.getEventsForDate;

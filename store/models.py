@@ -32,19 +32,20 @@ class HistoricalDate(models.Model):
 
 class LunarEvent(models.Model):
     EVENT_TYPE_CHOICES = [
-        ('lunar_day', 'Lunar Day'),      # regular lunar day
-        ('full_moon', 'Full Moon'),      # পূর্ণিমা
-        ('new_moon',  'New Moon'),       # অমাবস্যা
+        ('lunar_day', 'Lunar Day'),
+        ('full_moon', 'Full Moon'),
+        ('new_moon',  'New Moon'),
     ]
     
-    month_order = models.PositiveSmallIntegerField()
+    month_order = models.PositiveSmallIntegerField(null=True, blank=True)
+    month_name = models.CharField(max_length=80, blank=True)
     day = models.PositiveSmallIntegerField()
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     image = models.CharField(max_length=500, blank=True)
     label = models.CharField(max_length=80, blank=True)
     active = models.BooleanField(default=True)
-    event_type = models.CharField(          # ← শুধু এই লাইন যোগ হবে
+    event_type = models.CharField(
         max_length=20,
         choices=EVENT_TYPE_CHOICES,
         default='lunar_day',

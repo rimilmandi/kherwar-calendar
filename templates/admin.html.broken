@@ -383,7 +383,7 @@ function render(){
   $('ks').textContent=D.solarEvents.length;
   $('ka').textContent=D.ads.length;
 
-  // ✅ Month dropdown পপুলেট করি (সাঁওতালি নাম সহ)
+    // ✅ Month dropdown পপুলেট করি (value = সাঁওতালি নাম, data-order = order)
   const ms = $('em');
   if(ms){
     ms.innerHTML = D.months
@@ -392,7 +392,6 @@ function render(){
       .join('');
   }
   toggleDayInput();
-}
 
 /* ---------- Months ---------- */
 function renderMonths(){
@@ -501,12 +500,12 @@ async function saveEvent(){
     await req('event','POST',{
       month: month_order,
       month_name: month_name,
-      day: Number($('ed').value),
-      title: $('et').value,
-      description: $('edesc').value,
-      image: $('eimg').value,
-      label: $('elabel').value,
-      event_type: $('ed_type').value
+      day:Number($('ed').value),
+      title:$('et').value,
+      description:$('edesc').value,
+      image:$('eimg').value,
+      label:$('elabel').value,
+      event_type:$('ed_type').value
     });
     await loadDB();
     toast('✅ Event saved');
@@ -517,16 +516,18 @@ function editEvent(id){
   const x = D.events.find(v=>Number(v.id)===Number(id));
   if(!x) return;
   editingEventId = x.id;
-
-  // ✅ সাঁওতালি নাম দিয়ে dropdown সিলেক্ট
+  
+  // ✅ সাঁওতালি নাম দিয়ে dropdown সিলেক্ট করি
   const sel = $('em');
   if(x.month_name){
+    // month_name আছে → সেটা দিয়ে select
     sel.value = x.month_name;
   } else if(x.month){
+    // পুরনো ডেটা → order দিয়ে find করে select
     const opt = Array.from(sel.options).find(o => Number(o.dataset.order) === Number(x.month));
     if(opt) sel.value = opt.value;
   }
-
+  
   $('ed').value = x.day;
   $('et').value = x.title || '';
   $('edesc').value = x.description || '';
@@ -535,13 +536,6 @@ function editEvent(id){
   if($('ed_type')) $('ed_type').value = x.event_type || 'lunar_day';
   toggleDayInput();
   if(typeof previewImg === 'function') previewImg('eimg','eimgPreview');
-
-  // ✅ Save বাটন লুকাই, Update ও Cancel দেখাই
-  $('eventSaveBtn').style.display = 'none';
-  $('eventUpdateBtn').style.display = 'inline-block';
-  $('eventCancelBtn').style.display = 'inline-block';
-
-  document.querySelector('#events .card').scrollIntoView({behavior:'smooth'});
   toast('✏️ এডিট মোডে — Update চাপুন');
 }
 
@@ -555,12 +549,12 @@ async function updateEvent(){
       id: editingEventId,
       month: month_order,
       month_name: month_name,
-      day: Number($('ed').value),
-      title: $('et').value,
-      description: $('edesc').value,
-      image: $('eimg').value,
-      label: $('elabel').value,
-      event_type: $('ed_type').value
+      day:Number($('ed').value),
+      title:$('et').value,
+      description:$('edesc').value,
+      image:$('eimg').value,
+      label:$('elabel').value,
+      event_type:$('ed_type').value
     });
     editingEventId = null;
     resetEventForm();
